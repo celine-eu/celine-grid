@@ -1,0 +1,29 @@
+services:
+  migrate:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    command: alembic upgrade head
+    env_file:
+      - path: .env
+        required: false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Runs once and exits — api waits for it to complete successfully
+
+  api:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "8015:8015"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "keycloak.celine.localhost:host-gateway"
+      - "api.celine.localhost:host-gateway"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully

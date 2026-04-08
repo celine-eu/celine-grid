@@ -1,0 +1,41 @@
+version: "3"
+
+vars:
+  APP_MODULE: celine.grid.main:app
+  HOST: 0.0.0.0
+  PORT: 8015
+
+tasks:
+  setup:
+    desc: Install dependencies
+    cmds:
+      - uv sync
+
+  run:
+    desc: Run Grid BFF with hot-reload (development)
+    cmds:
+      - .venv/bin/uvicorn {{.APP_MODULE}} --host {{.HOST}} --port {{.PORT}} --reload
+
+  debug:
+    desc: Run Grid BFF with hot-reload and debugpy attached
+    cmds:
+      - DEBUG_ATTACH=nowait DEBUG_PORT=4{{.PORT}} .venv/bin/uvicorn {{.APP_MODULE}} --host {{.HOST}} --port {{.PORT}} --reload
+
+  migrate:
+    desc: Run all pending database migrations
+    cmds:
+      - uv run alembic upgrade head
+
+  migrate:create:
+    desc: Create a new migration (autogenerate from model changes)
+    cmds:
+      - uv run alembic revision --autogenerate -m "{{.CLI_ARGS}}"
+    vars:
+      CLI_ARGS: '{{default "auto generated migration" .CLI_ARGS}}'
+
+  release:
+    desc: Cut a new release (semantic-release, bump version, push tag)
+    cmds:
+      - uv run semantic-release -v version --no-vcs-release
+      - git push
+      - git push --tags
