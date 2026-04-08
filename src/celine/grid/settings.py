@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = (
-        "postgresql+asyncpg://postgres:securepassword123@host.docker.internal:15432/celine_grid"
+        "postgresql+asyncpg://postgres:securepassword123@host.docker.internal:15432/grid"
     )
     database_echo: bool = False
 

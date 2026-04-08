@@ -17,6 +17,7 @@ dependencies = [
 ]
 
 [tool.uv]
+sources = { celine-sdk = { path = "../celine-sdk", editable = true } }
 
 [dependency-groups]
 dev = [
