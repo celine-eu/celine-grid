@@ -156,6 +156,30 @@ async def heat_trend(network_id: str, dt: DTDep) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
+# Substations (CIM: Substation — secondary substations)
+# ---------------------------------------------------------------------------
+
+@router.get("/substations/map")
+async def substations_map(network_id: str, dt: DTDep) -> dict[str, Any]:
+    try:
+        return await dt.grid.substations_map(network_id)
+    except DTApiError as e:
+        raise _dt_error(e, "substations_map")
+
+
+# ---------------------------------------------------------------------------
+# Filter metadata
+# ---------------------------------------------------------------------------
+
+@router.get("/filters")
+async def get_filters(network_id: str, dt: DTDep) -> dict[str, list[str]]:
+    try:
+        return await dt.grid.filters(network_id)
+    except DTApiError as e:
+        raise _dt_error(e, "filters")
+
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
