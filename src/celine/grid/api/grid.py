@@ -113,6 +113,7 @@ async def heat_map(
     operational_unit: list[str] | None = _UNIT,
     line_name: list[str] | None = _LINE,
     substation_name: list[str] | None = _SUB,
+    risk_level: list[str] | None = Query(None),
 ) -> dict[str, Any]:
     try:
         return await dt.grid.heat_map(
@@ -121,6 +122,7 @@ async def heat_map(
             operational_unit=operational_unit,
             line_name=line_name,
             substation_name=substation_name,
+            risk_level=risk_level,
         )
     except DTApiError as e:
         raise _dt_error(e, "heat_map")

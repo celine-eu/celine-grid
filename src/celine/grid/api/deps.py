@@ -23,9 +23,7 @@ def _extract_token(request: Request) -> str | None:
     auth = request.headers.get("authorization", "")
     if auth.lower().startswith("bearer "):
         return auth[7:].strip()
-    logger.warning(
-        "Missing auth headers on %s %s", request.method, request.url.path
-    )
+    logger.warning("Missing auth headers on %s %s", request.method, request.url.path)
     return None
 
 
@@ -73,3 +71,27 @@ def get_client_ip(request: Request) -> str:
 UserDep = Annotated[JwtUser, Depends(get_user_from_request)]
 DbDep = Annotated[AsyncSession, Depends(get_db)]
 DTDep = Annotated[DTClient, Depends(get_dt_client)]
+
+# ---------------------------------------------------------------------------
+# Organisation / network helpers
+# ---------------------------------------------------------------------------
+
+DSO_TYPE = "dso"
+
+
+def resolve_dso_network(user: JwtUser) -> str:
+    """Return the network_id for the user's DSO organisation.
+
+    The Keycloak org alias is used directly as the network_id — no mapping
+    table needed. Operators configure their KC org alias to match their DT
+    network ID at deployment time.
+
+    The org attribute ``type=dso`` (set by celine-policies sync-orgs) is used
+    to identify DSO organisations in the token.
+
+    Raises HTTP 403 if the user is not a member of any DSO organisation.
+    """
+    for org in user.organizations:
+        if org.type == DSO_TYPE:
+            return org.alias
+    raise HTTPException(status_code=403, detail="DSO organisation membership required")

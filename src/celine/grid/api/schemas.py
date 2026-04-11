@@ -16,6 +16,8 @@ class MeUser(BaseModel):
     name: Optional[str] = None
     preferred_username: Optional[str] = None
     locale: Optional[str] = None
+    network_id: str       # Keycloak org alias of the user's DSO organisation
+    organization: str     # Same as network_id; exposed for display use
 
 
 class MeResponse(BaseModel):

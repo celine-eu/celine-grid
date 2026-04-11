@@ -33,8 +33,5 @@ class Settings(BaseSettings):
     # Upstream services
     digital_twin_api_url: Optional[str] = "http://host.docker.internal:8002"
 
-    # Default network / entity ID used when the frontend doesn't specify one
-    default_network_id: str = "default"
-
 
 settings = Settings()
