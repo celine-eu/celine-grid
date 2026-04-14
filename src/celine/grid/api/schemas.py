@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 from typing import Literal, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 # ---------------------------------------------------------------------------
@@ -29,27 +29,39 @@ class MeResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class AlertRuleCreate(BaseModel):
-    risk_type: Literal["wind", "heat"]
+    risk_types: list[Literal["wind", "heat"]]
     threshold: Literal["ALERT", "WARNING"]
-    operational_unit: Optional[str] = None
     recipients: Optional[str] = None
     active: bool = True
 
+    @field_validator("risk_types")
+    @classmethod
+    def non_empty(cls, v: list) -> list:
+        if not v:
+            raise ValueError("risk_types must contain at least one value")
+        return v
+
 
 class AlertRuleUpdate(BaseModel):
-    risk_type: Optional[Literal["wind", "heat"]] = None
+    risk_types: Optional[list[Literal["wind", "heat"]]] = None
     threshold: Optional[Literal["ALERT", "WARNING"]] = None
-    operational_unit: Optional[str] = None
     recipients: Optional[str] = None
     active: Optional[bool] = None
+
+    @field_validator("risk_types")
+    @classmethod
+    def non_empty(cls, v: Optional[list]) -> Optional[list]:
+        if v is not None and not v:
+            raise ValueError("risk_types must contain at least one value")
+        return v
 
 
 class AlertRuleResponse(BaseModel):
     id: uuid.UUID
     user_id: str
-    risk_type: str
+    network_id: str
+    risk_types: list[str]
     threshold: str
-    operational_unit: Optional[str]
     recipients: Optional[str]
     active: bool
     created_at: datetime

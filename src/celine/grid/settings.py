@@ -1,8 +1,10 @@
 """Application settings using pydantic-settings."""
 
+import os
 from typing import Optional
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from celine.sdk.settings.models import OidcSettings
+from celine.sdk.settings.models import OidcSettings, MqttSettings
 
 
 class Settings(BaseSettings):
@@ -12,7 +14,11 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )
 
-    oidc: OidcSettings = OidcSettings()
+    oidc: OidcSettings = OidcSettings(
+        audience="svc-grid",
+        client_id="svc-grid",
+        client_secret=os.getenv("CELINE_OIDC_CLIENT_SECRET", "svc-grid"),
+    )
 
     # Server
     host: str = "0.0.0.0"
@@ -32,6 +38,17 @@ class Settings(BaseSettings):
 
     # Upstream services
     digital_twin_api_url: Optional[str] = "http://host.docker.internal:8002"
+    nudging_api_url: str = "http://host.docker.internal:8016"
+
+    # Service-to-service OIDC scopes for outbound calls
+    dt_client_scope: Optional[str] = None
+    nudging_scope: Optional[str] = None
+
+    # MQTT pipeline listener
+    mqtt: MqttSettings = Field(default_factory=MqttSettings)
+
+    # Grid resilience pipeline flow name (as emitted by the DT pipeline)
+    grid_pipeline_flow: str = "grid-resilience-flow"
 
 
 settings = Settings()

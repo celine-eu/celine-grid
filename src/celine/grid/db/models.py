@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, Boolean, DateTime, Integer, Uuid, Text
+from sqlalchemy import JSON, String, Boolean, DateTime, Integer, Uuid, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -19,9 +19,9 @@ class AlertRule(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    risk_type: Mapped[str] = mapped_column(String(20), nullable=False)  # wind | heat
+    network_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    risk_types: Mapped[list] = mapped_column(JSON, nullable=False)  # ["wind"], ["heat"], or ["wind","heat"]
     threshold: Mapped[str] = mapped_column(String(20), nullable=False)  # ALERT | WARNING
-    operational_unit: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     recipients: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

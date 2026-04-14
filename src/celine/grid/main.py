@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from celine.grid.db import init_db
 from celine.grid.routes import create_api_router
+from celine.grid.security.middleware import PolicyMiddleware
+from celine.grid.services.pipeline_listener import create_broker, on_pipeline_run
 from celine.grid.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -16,7 +18,22 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+
+    broker = create_broker()
+    try:
+        await broker.connect()
+        await broker.subscribe(["celine/pipelines/runs/+"], on_pipeline_run)
+        logger.info("MQTT pipeline listener subscribed")
+    except Exception as exc:
+        logger.warning("MQTT broker unavailable at startup: %s", exc)
+        await broker.disconnect()
+
     yield
+
+    try:
+        await broker.disconnect()
+    except Exception:
+        pass
 
 
 def create_app() -> FastAPI:
@@ -39,6 +56,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(PolicyMiddleware)
 
     @app.get("/health", tags=["ops"])
     async def health() -> dict:

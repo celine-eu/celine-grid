@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from celine.grid.api.deps import DTDep
+from celine.grid.api.deps import DTDep, NetworkReadDep
 from celine.sdk.dt.util import DTApiError
 
 log = logging.getLogger(__name__)
@@ -31,6 +31,7 @@ def _dt_error(exc: DTApiError, label: str) -> HTTPException:
 @router.get("/wind/map")
 async def wind_map(
     network_id: str,
+    _user: NetworkReadDep,
     dt: DTDep,
     dates: list[str] | None = _DATES,
     operational_unit: list[str] | None = _UNIT,
@@ -54,6 +55,7 @@ async def wind_map(
 @router.get("/wind/bosco")
 async def wind_bosco(
     network_id: str,
+    _user: NetworkReadDep,
     dt: DTDep,
     dates: list[str] | None = _DATES,
     operational_unit: list[str] | None = _UNIT,
@@ -75,6 +77,7 @@ async def wind_bosco(
 @router.get("/wind/alert-distribution")
 async def wind_alert_distribution(
     network_id: str,
+    _user: NetworkReadDep,
     dt: DTDep,
     dates: list[str] | None = _DATES,
     operational_unit: list[str] | None = _UNIT,
@@ -94,7 +97,11 @@ async def wind_alert_distribution(
 
 
 @router.get("/wind/trend")
-async def wind_trend(network_id: str, dt: DTDep) -> list[dict[str, Any]]:
+async def wind_trend(
+    network_id: str,
+    _user: NetworkReadDep,
+    dt: DTDep,
+) -> list[dict[str, Any]]:
     try:
         return await dt.grid.wind_trend(network_id)
     except DTApiError as e:
@@ -108,6 +115,7 @@ async def wind_trend(network_id: str, dt: DTDep) -> list[dict[str, Any]]:
 @router.get("/heat/map")
 async def heat_map(
     network_id: str,
+    _user: NetworkReadDep,
     dt: DTDep,
     dates: list[str] | None = _DATES,
     operational_unit: list[str] | None = _UNIT,
@@ -131,6 +139,7 @@ async def heat_map(
 @router.get("/heat/alert-distribution")
 async def heat_alert_distribution(
     network_id: str,
+    _user: NetworkReadDep,
     dt: DTDep,
     dates: list[str] | None = _DATES,
     operational_unit: list[str] | None = _UNIT,
@@ -150,7 +159,11 @@ async def heat_alert_distribution(
 
 
 @router.get("/heat/trend")
-async def heat_trend(network_id: str, dt: DTDep) -> list[dict[str, Any]]:
+async def heat_trend(
+    network_id: str,
+    _user: NetworkReadDep,
+    dt: DTDep,
+) -> list[dict[str, Any]]:
     try:
         return await dt.grid.heat_trend(network_id)
     except DTApiError as e:
@@ -158,11 +171,15 @@ async def heat_trend(network_id: str, dt: DTDep) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# Substations (CIM: Substation — secondary substations)
+# Substations
 # ---------------------------------------------------------------------------
 
 @router.get("/substations/map")
-async def substations_map(network_id: str, dt: DTDep) -> dict[str, Any]:
+async def substations_map(
+    network_id: str,
+    _user: NetworkReadDep,
+    dt: DTDep,
+) -> dict[str, Any]:
     try:
         return await dt.grid.substations_map(network_id)
     except DTApiError as e:
@@ -174,7 +191,11 @@ async def substations_map(network_id: str, dt: DTDep) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 @router.get("/filters")
-async def get_filters(network_id: str, dt: DTDep) -> dict[str, list[str]]:
+async def get_filters(
+    network_id: str,
+    _user: NetworkReadDep,
+    dt: DTDep,
+) -> dict[str, list[str]]:
     try:
         return await dt.grid.filters(network_id)
     except DTApiError as e:
@@ -186,7 +207,11 @@ async def get_filters(network_id: str, dt: DTDep) -> dict[str, list[str]]:
 # ---------------------------------------------------------------------------
 
 @router.get("/summary")
-async def summary(network_id: str, dt: DTDep) -> dict[str, Any]:
+async def summary(
+    network_id: str,
+    _user: NetworkReadDep,
+    dt: DTDep,
+) -> dict[str, Any]:
     try:
         return await dt.grid.summary(network_id)
     except DTApiError as e:

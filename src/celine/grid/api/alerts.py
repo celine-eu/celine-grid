@@ -4,7 +4,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
-from celine.grid.api.deps import UserDep, DbDep
+from celine.grid.api.deps import AlertsReadDep, AlertsWriteDep, DbDep, resolve_dso_network
 from celine.grid.api.schemas import (
     AlertRuleCreate,
     AlertRuleUpdate,
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api", tags=["alerts"])
 # ---------------------------------------------------------------------------
 
 @router.get("/alert-rules", response_model=list[AlertRuleResponse])
-async def list_alert_rules(user: UserDep, db: DbDep) -> list[AlertRule]:
+async def list_alert_rules(user: AlertsReadDep, db: DbDep) -> list[AlertRule]:
     result = await db.execute(
         select(AlertRule).where(AlertRule.user_id == user.sub).order_by(AlertRule.created_at)
     )
@@ -30,8 +30,9 @@ async def list_alert_rules(user: UserDep, db: DbDep) -> list[AlertRule]:
 
 
 @router.post("/alert-rules", response_model=AlertRuleResponse, status_code=201)
-async def create_alert_rule(body: AlertRuleCreate, user: UserDep, db: DbDep) -> AlertRule:
-    rule = AlertRule(user_id=user.sub, **body.model_dump())
+async def create_alert_rule(body: AlertRuleCreate, user: AlertsWriteDep, db: DbDep) -> AlertRule:
+    network_id = resolve_dso_network(user)
+    rule = AlertRule(user_id=user.sub, network_id=network_id, **body.model_dump())
     db.add(rule)
     await db.commit()
     await db.refresh(rule)
@@ -40,7 +41,7 @@ async def create_alert_rule(body: AlertRuleCreate, user: UserDep, db: DbDep) -> 
 
 @router.patch("/alert-rules/{rule_id}", response_model=AlertRuleResponse)
 async def update_alert_rule(
-    rule_id: uuid.UUID, body: AlertRuleUpdate, user: UserDep, db: DbDep
+    rule_id: uuid.UUID, body: AlertRuleUpdate, user: AlertsWriteDep, db: DbDep
 ) -> AlertRule:
     result = await db.execute(
         select(AlertRule).where(AlertRule.id == rule_id, AlertRule.user_id == user.sub)
@@ -56,7 +57,7 @@ async def update_alert_rule(
 
 
 @router.delete("/alert-rules/{rule_id}", status_code=204)
-async def delete_alert_rule(rule_id: uuid.UUID, user: UserDep, db: DbDep) -> None:
+async def delete_alert_rule(rule_id: uuid.UUID, user: AlertsWriteDep, db: DbDep) -> None:
     result = await db.execute(
         select(AlertRule).where(AlertRule.id == rule_id, AlertRule.user_id == user.sub)
     )
@@ -72,7 +73,7 @@ async def delete_alert_rule(rule_id: uuid.UUID, user: UserDep, db: DbDep) -> Non
 # ---------------------------------------------------------------------------
 
 @router.get("/notification-settings", response_model=NotificationSettingsResponse)
-async def get_notification_settings(user: UserDep, db: DbDep) -> NotificationSettings:
+async def get_notification_settings(user: AlertsReadDep, db: DbDep) -> NotificationSettings:
     result = await db.execute(
         select(NotificationSettings).where(NotificationSettings.user_id == user.sub)
     )
@@ -87,7 +88,7 @@ async def get_notification_settings(user: UserDep, db: DbDep) -> NotificationSet
 
 @router.put("/notification-settings", response_model=NotificationSettingsResponse)
 async def update_notification_settings(
-    body: NotificationSettingsUpdate, user: UserDep, db: DbDep
+    body: NotificationSettingsUpdate, user: AlertsWriteDep, db: DbDep
 ) -> NotificationSettings:
     result = await db.execute(
         select(NotificationSettings).where(NotificationSettings.user_id == user.sub)

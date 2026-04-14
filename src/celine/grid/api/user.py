@@ -1,10 +1,12 @@
 """User / me endpoint."""
 
+import logging
 from fastapi import APIRouter
 
 from celine.grid.api.deps import UserDep, resolve_dso_network
 from celine.grid.api.schemas import MeResponse, MeUser
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["user"])
 
 
@@ -16,8 +18,7 @@ async def me(user: UserDep) -> MeResponse:
     The network_id is derived from the Keycloak org alias — no mapping needed.
     """
 
-    print(f"{user.claims}")
-
+    log.debug("me claims: %s", user.claims)
     network_id = resolve_dso_network(user)
     return MeResponse(
         user=MeUser(
