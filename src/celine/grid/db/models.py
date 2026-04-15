@@ -22,6 +22,7 @@ class AlertRule(Base):
     network_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     risk_types: Mapped[list] = mapped_column(JSON, nullable=False)  # ["wind"], ["heat"], or ["wind","heat"]
     threshold: Mapped[str] = mapped_column(String(20), nullable=False)  # ALERT | WARNING
+    network_id_unset: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # True for rows backfilled by 002 with network_id=''
     recipients: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
