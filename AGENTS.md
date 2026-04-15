@@ -15,4 +15,3 @@ A `manager` can manage notifications settings registering type of alerts (eg. WA
 
 The notification uses the `nuddging-tool` to send out while `celine-grid` listen for events from pipelines to identify the triggering events
 
-
