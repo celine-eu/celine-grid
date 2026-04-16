@@ -21,12 +21,12 @@ tasks:
     cmds:
       - DEBUG_ATTACH=nowait DEBUG_PORT=4{{.PORT}} .venv/bin/uvicorn {{.APP_MODULE}} --host {{.HOST}} --port {{.PORT}} --reload
 
-  migrate:
+  alembic:upgrade:
     desc: Run all pending database migrations
     cmds:
       - uv run alembic upgrade head
 
-  migrate:create:
+  alembic:create:
     desc: Create a new migration (autogenerate from model changes)
     cmds:
       - uv run alembic revision --autogenerate -m "{{.CLI_ARGS}}"
