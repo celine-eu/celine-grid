@@ -2,6 +2,22 @@
 
 <!-- version list -->
 
+## v1.0.3 (2026-04-17)
+
+### Bug Fixes
+
+- Correct policies loading
+  ([`0ade542`](https://github.com/celine-eu/celine-grid/commit/0ade542ebfd91d15495db96ca5d031e66d75f836))
+
+### Chores
+
+- Add docs
+  ([`69524df`](https://github.com/celine-eu/celine-grid/commit/69524df85dc5fa7ade1eb86c036d8ddf95119b95))
+
+- Update docs
+  ([`ac8de0f`](https://github.com/celine-eu/celine-grid/commit/ac8de0fbc30ee0296a3a138c2776c66d7b0e235e))
+
+
 ## v1.0.2 (2026-04-17)
 
 ### Bug Fixes
