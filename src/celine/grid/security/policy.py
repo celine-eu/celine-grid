@@ -30,7 +30,7 @@ class Decision:
 
 def _dso_network(user: JwtUser) -> str | None:
     for org in user.organizations:
-        if org.type == DSO_TYPE:
+        if org.type == DSO_TYPE or org.has_attribute("type", DSO_TYPE):
             return org.alias
     return None
 

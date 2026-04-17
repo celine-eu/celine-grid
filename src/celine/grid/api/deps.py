@@ -88,9 +88,12 @@ def resolve_dso_network(user: JwtUser) -> str:
 
     The Keycloak org alias is used directly as the network_id — no mapping
     table needed.  Raises HTTP 403 if the user has no DSO organisation.
+
+    KC 26 org mapper may emit type either at the top-level org dict or inside
+    the attributes map; both locations are checked.
     """
     for org in user.organizations:
-        if org.type == DSO_TYPE:
+        if org.type == DSO_TYPE or org.has_attribute("type", DSO_TYPE):
             return org.alias
     raise HTTPException(status_code=403, detail="DSO organisation membership required")
 
