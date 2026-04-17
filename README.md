@@ -68,6 +68,7 @@ All settings are read from environment variables or a `.env` file. The table bel
 | `NUDGING_API_URL` | `http://host.docker.internal:8016` | nudging-tool base URL |
 | `CELINE_OIDC_CLIENT_SECRET` | `svc-grid` | OIDC client secret |
 | `CORS_ORIGINS` | `["http://localhost:3006"]` | Allowed CORS origins |
+| `CELINE_POLICIES_DIR` | `./policies` | Directory containing `.rego` policy files |
 | `GRID_PIPELINE_FLOW` | `grid-resilience-flow` | Prefect flow name to listen for |
 | `MQTT__HOST` | `localhost` | MQTT broker host |
 | `JWT_HEADER_NAME` | `x-auth-request-access-token` | Header carrying the bearer token (set by OAuth2 Proxy) |
