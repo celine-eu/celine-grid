@@ -4,7 +4,7 @@ import os
 from typing import Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from celine.sdk.settings.models import OidcSettings, MqttSettings
+from celine.sdk.settings.models import OidcSettings, MqttSettings, PoliciesSettings
 
 
 class Settings(BaseSettings):
@@ -46,6 +46,9 @@ class Settings(BaseSettings):
 
     # MQTT pipeline listener
     mqtt: MqttSettings = Field(default_factory=MqttSettings)
+
+    # OPA policy engine — CELINE_POLICIES_DIR overrides the directory
+    policies: PoliciesSettings = Field(default_factory=PoliciesSettings)
 
     # Grid resilience pipeline flow name (as emitted by the DT pipeline)
     grid_pipeline_flow: str = "grid-resilience-flow"

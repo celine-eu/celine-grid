@@ -10,13 +10,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from pathlib import Path
 
 from celine.sdk.auth import JwtUser
 
+from celine.grid.settings import settings
+
 logger = logging.getLogger(__name__)
 
-_POLICIES_DIR = Path(__file__).parent.parent.parent.parent.parent / "policies"
 _PACKAGE = "celine.grid.access"
 
 DSO_TYPE = "dso"
@@ -90,13 +90,14 @@ class GridAccessPolicy:
         try:
             from celine.sdk.policies import PolicyEngine
 
-            if _POLICIES_DIR.exists():
-                self._engine = PolicyEngine(policies_dir=str(_POLICIES_DIR))
+            policies_dir = settings.policies.policies_dir
+            if policies_dir.exists():
+                self._engine = PolicyEngine(policies_dir=str(policies_dir))
                 self._engine.load()
-                logger.info("OPA policy engine loaded from %s", _POLICIES_DIR)
+                logger.info("OPA policy engine loaded from %s", policies_dir)
             else:
                 logger.warning(
-                    "Policies dir %s not found — running without OPA", _POLICIES_DIR
+                    "Policies dir %s not found — running without OPA", policies_dir
                 )
         except ImportError:
             logger.warning("celine.sdk.policies not available — running without OPA")
