@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.4 (2026-04-17)
+
+### Bug Fixes
+
+- Corrected dso type flag
+  ([`30f846b`](https://github.com/celine-eu/celine-grid/commit/30f846b8d78d250b6703f3b04349055e9f2c0b0a))
+
+
 ## v1.0.3 (2026-04-17)
 
 ### Bug Fixes
