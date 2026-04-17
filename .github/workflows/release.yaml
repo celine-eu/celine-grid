@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine image tag(s)
+        id: vars
+        run: |
+          if [[ "${GITHUB_REF}" == refs/heads/main ]]; then
+            echo "tag=dev" >> $GITHUB_OUTPUT
+            echo "extra_tag=" >> $GITHUB_OUTPUT
+          else
+            TAG_NAME=${GITHUB_REF#refs/tags/}
+            echo "tag=${TAG_NAME}" >> $GITHUB_OUTPUT
+            echo "extra_tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Docker image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/celine-roi
+          docker build -t $IMAGE:${{ steps.vars.outputs.tag }} .
+          if [ -n "${{ steps.vars.outputs.extra_tag }}" ]; then
+            docker tag $IMAGE:${{ steps.vars.outputs.tag }} $IMAGE:${{ steps.vars.outputs.extra_tag }}
+          fi
+
+      - name: Push Docker image(s)
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/celine-roi
+          docker push $IMAGE:${{ steps.vars.outputs.tag }}
+          if [ -n "${{ steps.vars.outputs.extra_tag }}" ]; then
+            docker push $IMAGE:${{ steps.vars.outputs.extra_tag }}
+          fi
