@@ -13,7 +13,7 @@ dependencies = [
   "psycopg2-binary>=2.9.0",
   "alembic>=1.13.0",
   "sqlalchemy-utils>=0.42.1",
-  "celine-sdk>=1.10.0",
+  "celine-sdk>=1.11.0",
 ]
 
 
