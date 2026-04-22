@@ -3,7 +3,7 @@
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 
 from celine.grid.api.deps import DTDep, NetworkReadDep
 from celine.sdk.dt.util import DTApiError
@@ -195,11 +195,98 @@ async def get_filters(
     network_id: str,
     _user: NetworkReadDep,
     dt: DTDep,
-) -> dict[str, list[str]]:
+) -> dict[str, Any]:
     try:
         return await dt.grid.filters(network_id)
     except DTApiError as e:
         raise _dt_error(e, "filters")
+
+
+# ---------------------------------------------------------------------------
+# Shapes / Risks / Trendline  (ValueFetcherSpec-backed endpoints)
+# ---------------------------------------------------------------------------
+
+@router.get("/shapes")
+async def shapes(
+    network_id: str,
+    _user: NetworkReadDep,
+    dt: DTDep,
+    response: Response,
+    asset_type: list[str] | None = Query(None),
+) -> dict[str, Any]:
+    """Static CIM asset topology as GeoJSON FeatureCollection — loaded once by the frontend."""
+    import json as _json
+
+    try:
+        result = await dt.grid.shapes(network_id, asset_type=asset_type)
+        response.headers["Cache-Control"] = "public, max-age=3600"
+
+        features = []
+        for item in result.to_dict()["items"]:
+            raw = item.pop("feature_geojson", None)
+            item.pop("geom", None)
+
+            if raw is None:
+                continue
+            if isinstance(raw, str):
+                try:
+                    parsed = _json.loads(raw)
+                except Exception:
+                    continue
+            else:
+                parsed = raw
+
+            geometry = parsed.get("geometry", parsed) if isinstance(parsed, dict) else None
+            if not geometry:
+                continue
+
+            features.append({"type": "Feature", "geometry": geometry, "properties": item})
+
+        return {"type": "FeatureCollection", "features": features}
+    except DTApiError as e:
+        raise _dt_error(e, "shapes")
+
+
+@router.get("/risks")
+async def risks(
+    network_id: str,
+    _user: NetworkReadDep,
+    dt: DTDep,
+    dates: list[str] | None = _DATES,
+    risk_vector: list[str] | None = Query(None),
+) -> dict[str, Any]:
+    """WARNING/ALERT risk rows for given dates — no geometry."""
+    try:
+        result = await dt.grid.risks(
+            network_id,
+            dates=dates or [],
+            risk_vector=risk_vector,
+        )
+        return result.to_dict()
+    except DTApiError as e:
+        raise _dt_error(e, "risks")
+
+
+@router.get("/trendline")
+async def trendline(
+    network_id: str,
+    _user: NetworkReadDep,
+    dt: DTDep,
+    date_from: str = Query(...),
+    date_to: str = Query(...),
+    risk_vector: list[str] | None = Query(None),
+) -> dict[str, Any]:
+    """Daily risk percentage indicator per vector."""
+    try:
+        result = await dt.grid.trendline(
+            network_id,
+            date_from=date_from,
+            date_to=date_to,
+            risk_vector=risk_vector,
+        )
+        return result.to_dict()
+    except DTApiError as e:
+        raise _dt_error(e, "trendline")
 
 
 # ---------------------------------------------------------------------------
