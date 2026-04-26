@@ -267,6 +267,24 @@ async def risks(
         raise _dt_error(e, "risks")
 
 
+@router.get("/risks-now")
+async def risks_now(
+    network_id: str,
+    _user: NetworkReadDep,
+    dt: DTDep,
+    risk_vector: list[str] | None = Query(None),
+) -> dict[str, Any]:
+    """Nowcasting risk rows — current observations, no date filter."""
+    try:
+        result = await dt.grid.risks_now(
+            network_id,
+            risk_vector=risk_vector,
+        )
+        return result.to_dict()
+    except DTApiError as e:
+        raise _dt_error(e, "risks_now")
+
+
 @router.get("/trendline")
 async def trendline(
     network_id: str,
