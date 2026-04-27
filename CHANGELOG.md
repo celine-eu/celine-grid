@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.1.0 (2026-04-27)
+
+### Chores
+
+- Upgrade celine-sdk to 1.12.0
+  ([`a270b2c`](https://github.com/celine-eu/celine-grid/commit/a270b2c219754972d40909963f74f871e681a628))
+
+### Features
+
+- Add nowcasting query
+  ([`8a92bf8`](https://github.com/celine-eu/celine-grid/commit/8a92bf8b671ef7d68b114eb66cbf80ecb7a6dedb))
+
+
 ## v1.0.5 (2026-04-22)
 
 ### Bug Fixes
