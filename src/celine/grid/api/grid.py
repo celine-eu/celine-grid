@@ -206,6 +206,22 @@ async def get_filters(
 # Shapes / Risks / Trendline  (ValueFetcherSpec-backed endpoints)
 # ---------------------------------------------------------------------------
 
+@router.get("/tile-index")
+async def tile_index(
+    network_id: str,
+    _user: NetworkReadDep,
+    dt: DTDep,
+    response: Response,
+) -> dict[str, Any]:
+    """Tile catalog for progressive shape loading — one row per 5 km tile."""
+    try:
+        result = await dt.grid.tile_index(network_id)
+        response.headers["Cache-Control"] = "public, max-age=3600"
+        return result.to_dict()
+    except DTApiError as e:
+        raise _dt_error(e, "tile_index")
+
+
 @router.get("/shapes")
 async def shapes(
     network_id: str,
@@ -213,12 +229,17 @@ async def shapes(
     dt: DTDep,
     response: Response,
     asset_type: list[str] | None = Query(None),
+    tile_id: list[str] | None = Query(None),
 ) -> dict[str, Any]:
-    """Static CIM asset topology as GeoJSON FeatureCollection — loaded once by the frontend."""
+    """Static CIM asset topology as GeoJSON FeatureCollection.
+
+    Pass tile_id for progressive loading (e.g. ?tile_id=tile_0_3&tile_id=tile_1_3).
+    Omit tile_id to load all shapes (backward compatible).
+    """
     import json as _json
 
     try:
-        result = await dt.grid.shapes(network_id, asset_type=asset_type)
+        result = await dt.grid.shapes(network_id, asset_type=asset_type, tile_ids=tile_id)
         response.headers["Cache-Control"] = "public, max-age=3600"
 
         features = []
