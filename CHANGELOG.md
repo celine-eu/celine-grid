@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.1.1 (2026-04-27)
+
+### Bug Fixes
+
+- Upgrade sdk
+  ([`ce2b12f`](https://github.com/celine-eu/celine-grid/commit/ce2b12fbcea2512b703d6a2c55af568c044cbd84))
+
+- Upgrade sdk
+  ([`9c1e6d9`](https://github.com/celine-eu/celine-grid/commit/9c1e6d91962bec18e4251547a6757ba0b568d315))
+
+
 ## v1.1.0 (2026-04-27)
 
 ### Chores
