@@ -2,10 +2,11 @@
 
 ## Overview
 
-`celine-grid` is a FastAPI Backend-for-Frontend. It has no domain logic of its own — it orchestrates two external concerns:
+`celine-grid` is a FastAPI Backend-for-Frontend. It orchestrates three external concerns:
 
 1. **Read path** — proxy grid resilience data (wind/heat risk, substations, filters, summary) from the Digital Twin to the frontend, enforcing DSO network-ownership at the request boundary.
-2. **Write path** — persist per-user alert rules and notification settings in PostgreSQL, then dispatch nudging events to the nudging-tool when the grid-resilience-flow pipeline completes.
+2. **CIM topology path** — proxy ValueFetcherSpec-backed queries (tile-index, shapes, risks, nowcasting, trendline) from the Digital Twin, with lightweight presentation transformations (GeoJSON assembly for shapes).
+3. **Write path** — persist per-user alert rules and notification settings in PostgreSQL, then dispatch nudging events to the nudging-tool when the grid-resilience-flow pipeline completes.
 
 ```
 Frontend ──► celine-grid BFF ──► Digital Twin API  (read)
@@ -39,7 +40,7 @@ The header name is configurable via `JWT_HEADER_NAME`.
 | Action | Who may proceed |
 |---|---|
 | `read` | DSO users whose org alias matches the requested `network_id`; service accounts with `grid.read` or `grid.admin` scope |
-| `alerts.read` | Any authenticated DSO user (ownership enforced at DB query level by `user_id = sub`) |
+| `alerts.read` | Any authenticated non-service user (ownership enforced at DB query level by `user_id = sub`) |
 | `alerts.write` | DSO users with `grid.alerts.write` or `grid.admin` scope |
 
 The `GridAccessPolicy` class (`security/policy.py`) loads the Rego bundle once at import time and evaluates decisions per request. When the policy engine is unavailable (e.g. local dev without OPA), the policy falls back to permissive — `allow=True`.
@@ -56,6 +57,11 @@ Available data surfaces:
 - **Heat** — `heat/map`, `heat/alert-distribution`, `heat/trend`
 - **Substations** — `substations/map`
 - **Metadata** — `filters`, `summary`
+- **CIM topology** — `tile-index`, `shapes`, `risks`, `risks-now`, `trendline`
+
+The CIM topology endpoints use ValueFetcherSpec-backed queries. `tile-index` returns the tile catalog for progressive loading. `shapes` assembles CIM asset topology as a GeoJSON FeatureCollection, parsing per-row `feature_geojson` and building Feature objects (a lightweight presentation transformation). `risks` returns date-filtered risk rows per vector. `risks-now` returns current nowcasting observations without date filtering. `trendline` returns daily risk percentage over a `date_from`/`date_to` range.
+
+`tile-index` and `shapes` set `Cache-Control: public, max-age=3600` for frontend caching.
 
 Each DT call is authenticated using client-credentials OIDC flow (`OidcClientCredentialsProvider`).
 

@@ -19,12 +19,15 @@ The service runs on port `8015`. Interactive docs are available at `/api/docs`.
 | Group | Endpoints |
 |---|---|
 | **user** | `GET /api/me` |
-| **grid** | `GET /api/grid/{network_id}/wind/map`, `/wind/bosco`, `/wind/alert-distribution`, `/wind/trend` |
-| | `GET /api/grid/{network_id}/heat/map`, `/heat/alert-distribution`, `/heat/trend` |
-| | `GET /api/grid/{network_id}/substations/map`, `/filters`, `/summary` |
+| **grid — wind** | `GET /api/grid/{network_id}/wind/map`, `/wind/bosco`, `/wind/alert-distribution`, `/wind/trend` |
+| **grid — heat** | `GET /api/grid/{network_id}/heat/map`, `/heat/alert-distribution`, `/heat/trend` |
+| **grid — infra** | `GET /api/grid/{network_id}/substations/map`, `/filters`, `/summary` |
+| **grid — CIM topology** | `GET /api/grid/{network_id}/tile-index`, `/shapes`, `/risks`, `/risks-now`, `/trendline` |
 | **alerts** | `GET/POST /api/alert-rules`, `PATCH/DELETE /api/alert-rules/{id}` |
 | | `GET/PUT /api/notification-settings` |
 | **ops** | `GET /health` |
+
+The CIM topology endpoints proxy ValueFetcherSpec-backed queries from the Digital Twin. `/tile-index` and `/shapes` set `Cache-Control: public, max-age=3600`. `/shapes` assembles GeoJSON FeatureCollections from per-row feature data. `/risks-now` returns current nowcasting observations without date filtering.
 
 ## Local development
 
@@ -66,11 +69,17 @@ All settings are read from environment variables or a `.env` file. The table bel
 | `DATABASE_URL` | `postgresql+asyncpg://postgres:securepassword123@host.docker.internal:15432/grid` | PostgreSQL DSN |
 | `DIGITAL_TWIN_API_URL` | `http://host.docker.internal:8002` | Digital Twin base URL |
 | `NUDGING_API_URL` | `http://host.docker.internal:8016` | nudging-tool base URL |
+| `DATABASE_ECHO` | `false` | Log SQL statements |
 | `CELINE_OIDC_CLIENT_SECRET` | `svc-grid` | OIDC client secret |
+| `CELINE_OIDC_BASE_URL` | (from sdk default) | OIDC issuer base URL |
+| `CELINE_OIDC_CLIENT_ID` | `svc-grid` | OIDC client ID |
+| `DT_CLIENT_SCOPE` | — | OAuth2 scope for outbound DT calls |
+| `NUDGING_SCOPE` | — | OAuth2 scope for outbound nudging calls |
 | `CORS_ORIGINS` | `["http://localhost:3006"]` | Allowed CORS origins |
 | `CELINE_POLICIES_DIR` | `./policies` | Directory containing `.rego` policy files |
 | `GRID_PIPELINE_FLOW` | `grid-resilience-flow` | Prefect flow name to listen for |
 | `MQTT__HOST` | `localhost` | MQTT broker host |
+| `MQTT__PORT` | `1883` | MQTT broker port |
 | `JWT_HEADER_NAME` | `x-auth-request-access-token` | Header carrying the bearer token (set by OAuth2 Proxy) |
 
 ## Database migrations
