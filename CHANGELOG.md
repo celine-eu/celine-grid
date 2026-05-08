@@ -2,6 +2,39 @@
 
 <!-- version list -->
 
+## v1.1.2 (2026-05-08)
+
+### Bug Fixes
+
+- Grid rule setting
+  ([`419ff2a`](https://github.com/celine-eu/celine-grid/commit/419ff2a3769e9587fc4109281096b4c5c8c07855))
+
+### Chores
+
+- Update docs
+  ([`c39a70b`](https://github.com/celine-eu/celine-grid/commit/c39a70b1577e3acbaed639268e8ed3248ff20c88))
+
+- **deps**: Bump fastapi from 0.135.3 to 0.136.1
+  ([`1a93327`](https://github.com/celine-eu/celine-grid/commit/1a93327736e3178ac5272bafea930654d5d6ca4b))
+
+- **deps**: Bump psycopg2-binary
+  ([`e8c1d1b`](https://github.com/celine-eu/celine-grid/commit/e8c1d1b0600524b02d0ea10265bd79ce43d7e8c1))
+
+- **deps**: Bump pydantic from 2.12.5 to 2.13.3
+  ([`d6988a9`](https://github.com/celine-eu/celine-grid/commit/d6988a9b8b53f46e1499929707b20d4f27b1098f))
+
+- **deps**: Bump pydantic-settings from 2.13.1 to 2.14.0
+  ([`3a10ae1`](https://github.com/celine-eu/celine-grid/commit/3a10ae1c618cc49e083361e14b22498ed48e1aee))
+
+- **deps**: Update uvicorn[standard] requirement
+  ([`b529774`](https://github.com/celine-eu/celine-grid/commit/b529774142a2dfd839bc0a26ea356ad41476f93a))
+
+### Continuous Integration
+
+- Bump the actions group across 1 directory with 3 updates
+  ([`b604a62`](https://github.com/celine-eu/celine-grid/commit/b604a62115c7820cf3e85526543dc1409b0b402a))
+
+
 ## v1.1.1 (2026-04-27)
 
 ### Bug Fixes
