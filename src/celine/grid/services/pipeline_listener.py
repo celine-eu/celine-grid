@@ -9,6 +9,9 @@ Pattern mirrors flexibility-api/services/pipeline_listener.py.
 from __future__ import annotations
 
 import logging
+import re
+from datetime import datetime
+from typing import Any
 
 from celine.sdk.auth import OidcClientCredentialsProvider
 from celine.sdk.broker import MqttBroker, MqttConfig, PipelineRunEvent, ReceivedMessage
@@ -24,6 +27,9 @@ logger = logging.getLogger(__name__)
 _broker: MqttBroker | None = None
 _dt_client: DTClient | None = None
 _nudging_client: NudgingAdminClient | None = None
+_METADATA_CONTAINERS = ("facts", "payload", "metadata", "parameters", "params", "data")
+_TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def get_broker() -> MqttBroker | None:
@@ -73,6 +79,67 @@ def create_broker() -> MqttBroker:
     return _broker
 
 
+def _find_pipeline_value(payload: dict[str, Any], key: str) -> Any:
+    if key in payload:
+        return payload[key]
+
+    for container in _METADATA_CONTAINERS:
+        nested = payload.get(container)
+        if isinstance(nested, dict) and key in nested:
+            return nested[key]
+
+    return None
+
+
+def _parse_datetime(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = value.strip()
+    if raw.endswith("Z"):
+        raw = f"{raw[:-1]}+00:00"
+    try:
+        return datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+
+
+def _normalise_period(value: Any) -> str | None:
+    if isinstance(value, str) and _DATE_RE.match(value.strip()):
+        return value.strip()
+
+    dt = _parse_datetime(value)
+    if dt:
+        return dt.date().isoformat()
+
+    return None
+
+
+def _normalise_time(value: Any) -> str | None:
+    if isinstance(value, str):
+        raw = value.strip()
+        if _TIME_RE.match(raw):
+            return raw
+
+    dt = _parse_datetime(value)
+    if dt:
+        return dt.strftime("%H:%M")
+
+    return None
+
+
+def _pipeline_nudging_window(
+    payload: dict[str, Any],
+    event: PipelineRunEvent,
+) -> tuple[str | None, str | None, str | None]:
+    period = _normalise_period(_find_pipeline_value(payload, "period"))
+    if not period:
+        period = _normalise_period(event.timestamp)
+
+    window_start = _normalise_time(_find_pipeline_value(payload, "window_start"))
+    window_end = _normalise_time(_find_pipeline_value(payload, "window_end"))
+    return period, window_start, window_end
+
+
 async def on_pipeline_run(msg: ReceivedMessage) -> None:
     """Handle celine/pipelines/runs/+ messages."""
     try:
@@ -88,14 +155,29 @@ async def on_pipeline_run(msg: ReceivedMessage) -> None:
         return
 
     network_id = event.namespace
-    logger.debug("Grid resilience pipeline completed for network=%s", network_id)
+    period, window_start, window_end = _pipeline_nudging_window(msg.payload, event)
+    logger.debug(
+        "Grid resilience pipeline completed for network=%s period=%s window=%s-%s",
+        network_id,
+        period,
+        window_start,
+        window_end,
+    )
 
     if _dt_client is None or _nudging_client is None:
         logger.warning("Service clients not initialised; skipping alert dispatch")
         return
 
     async with AsyncSessionLocal() as session:
-        count = await dispatch_grid_alerts(network_id, _dt_client, _nudging_client, session)
+        count = await dispatch_grid_alerts(
+            network_id,
+            _dt_client,
+            _nudging_client,
+            session,
+            period=period,
+            window_start=window_start,
+            window_end=window_end,
+        )
 
     if count:
         logger.info(

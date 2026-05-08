@@ -46,6 +46,7 @@ class Settings(BaseSettings):
 
     # MQTT pipeline listener
     mqtt: MqttSettings = Field(default_factory=MqttSettings)
+    mqtt_startup_timeout_seconds: float = 30.0
 
     # OPA policy engine — CELINE_POLICIES_DIR overrides the directory
     policies: PoliciesSettings = Field(default_factory=PoliciesSettings)

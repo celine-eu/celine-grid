@@ -1,5 +1,6 @@
 """CELINE Grid BFF — FastAPI application factory."""
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -21,9 +22,18 @@ async def lifespan(app: FastAPI):
 
     broker = create_broker()
     try:
-        await broker.connect()
+        await asyncio.wait_for(
+            broker.connect(),
+            timeout=settings.mqtt_startup_timeout_seconds,
+        )
         await broker.subscribe(["celine/pipelines/runs/+"], on_pipeline_run)
         logger.info("MQTT pipeline listener subscribed")
+    except TimeoutError:
+        logger.warning(
+            "MQTT broker unavailable after %.1fs startup timeout",
+            settings.mqtt_startup_timeout_seconds,
+        )
+        await broker.disconnect()
     except Exception as exc:
         logger.warning("MQTT broker unavailable at startup: %s", exc)
         await broker.disconnect()

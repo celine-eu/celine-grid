@@ -59,11 +59,13 @@ allow if {
     input.action.name == "alerts.read"
 }
 
-# DSO users: write requires explicit scope — alert management is opt-in.
+# DSO users: any authenticated DSO member may manage their own alert rules.
+# Ownership is enforced at the DB query level (user_id == sub); create also
+# resolves the user's DSO organization into network_id.
 allow if {
     not is_service
     input.action.name == "alerts.write"
-    has_any_scope(["grid.alerts.write", "grid.admin"])
+    input.subject.claims.network_id != null
 }
 
 # Service full access
@@ -98,11 +100,11 @@ reason := "network_id mismatch: user does not belong to the requested DSO" if {
     not owns_network
 }
 
-reason := "missing grid.alerts.write scope" if {
+reason := "missing DSO organization membership" if {
     not allow
     not is_service
     input.action.name == "alerts.write"
-    not has_any_scope(["grid.alerts.write", "grid.admin"])
+    input.subject.claims.network_id == null
 }
 
 reason := "service missing grid.read scope" if {

@@ -32,7 +32,11 @@ async def list_alert_rules(user: AlertsReadDep, db: DbDep) -> list[AlertRule]:
 @router.post("/alert-rules", response_model=AlertRuleResponse, status_code=201)
 async def create_alert_rule(body: AlertRuleCreate, user: AlertsWriteDep, db: DbDep) -> AlertRule:
     network_id = resolve_dso_network(user)
-    rule = AlertRule(user_id=user.sub, network_id=network_id, **body.model_dump())
+    rule = AlertRule(
+        user_id=user.sub,
+        network_id=network_id,
+        **body.model_dump(),
+    )
     db.add(rule)
     await db.commit()
     await db.refresh(rule)

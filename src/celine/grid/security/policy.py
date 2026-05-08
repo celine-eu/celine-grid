@@ -63,7 +63,7 @@ def _make_policy_input(user: JwtUser, action: str, attributes: dict):
             scopes=scopes,
             # Pass grid-specific extras in claims so rego can access them
             claims={
-                "network_id": None if user.is_service_account else _dso_network(user),
+                "network_id": None if subject_type == SubjectType.SERVICE else _dso_network(user),
             },
         ),
         resource=Resource(

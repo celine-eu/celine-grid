@@ -80,6 +80,7 @@ All settings are read from environment variables or a `.env` file. The table bel
 | `GRID_PIPELINE_FLOW` | `grid-resilience-flow` | Prefect flow name to listen for |
 | `MQTT__HOST` | `localhost` | MQTT broker host |
 | `MQTT__PORT` | `1883` | MQTT broker port |
+| `MQTT_STARTUP_TIMEOUT_SECONDS` | `10.0` | Maximum startup wait for the MQTT listener |
 | `JWT_HEADER_NAME` | `x-auth-request-access-token` | Header carrying the bearer token (set by OAuth2 Proxy) |
 
 ## Database migrations
