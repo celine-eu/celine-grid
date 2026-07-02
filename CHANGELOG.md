@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.2.0 (2026-07-02)
+
+### Chores
+
+- Upgrade celine-sdk to 1.13.0
+  ([`fdaa40a`](https://github.com/celine-eu/celine-grid/commit/fdaa40ae70ff0636e03697fe8b5aa35359cff052))
+
+### Features
+
+- Load group via sdk
+  ([`411725c`](https://github.com/celine-eu/celine-grid/commit/411725c2143d7ca209ad78287b0812a6f849d56d))
+
+
 ## v1.1.2 (2026-05-08)
 
 ### Bug Fixes
