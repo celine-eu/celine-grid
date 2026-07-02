@@ -10,6 +10,11 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["user"])
 
 
+@router.get("/ping", include_in_schema=False)
+async def ping(user: UserDep) -> dict:
+    return {"ok": True}
+
+
 @router.get("/me", response_model=MeResponse)
 async def me(user: UserDep) -> MeResponse:
     """Return the authenticated user's identity claims.

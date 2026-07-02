@@ -12,6 +12,7 @@ import logging
 from dataclasses import dataclass
 
 from celine.sdk.auth import JwtUser
+from celine.sdk.auth.jwt import extract_groups
 
 from celine.grid.settings import settings
 
@@ -53,7 +54,7 @@ def _make_policy_input(user: JwtUser, action: str, attributes: dict):
     else:
         subject_type = SubjectType.USER
 
-    groups = user.claims.get("groups") or []
+    groups = extract_groups(user.claims)
 
     return PolicyInput(
         subject=Subject(
