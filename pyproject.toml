@@ -20,7 +20,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "python-semantic-release>=10.5.3",
-    "debugpy>=1.8.20",
+    "debugpy>=1.8.21",
 ]
 
 [build-system]
