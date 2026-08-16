@@ -11,6 +11,11 @@ tasks:
     cmds:
       - uv sync
 
+  test:
+    desc: Run the test suite (no external services required)
+    cmds:
+      - uv run pytest {{.CLI_ARGS}}
+
   run:
     desc: Run Grid BFF with hot-reload (development)
     cmds:

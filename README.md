@@ -76,12 +76,40 @@ All settings are read from environment variables or a `.env` file. The table bel
 | `DT_CLIENT_SCOPE` | — | OAuth2 scope for outbound DT calls |
 | `NUDGING_SCOPE` | — | OAuth2 scope for outbound nudging calls |
 | `CORS_ORIGINS` | `["http://localhost:3006"]` | Allowed CORS origins |
-| `CELINE_POLICIES_DIR` | `./policies` | Directory containing `.rego` policy files |
+| `CELINE_POLICIES_POLICIES_DIR` | `./policies` | Directory containing `.rego` policy files |
 | `GRID_PIPELINE_FLOW` | `grid-resilience-flow` | Prefect flow name to listen for |
-| `MQTT__HOST` | `localhost` | MQTT broker host |
-| `MQTT__PORT` | `1883` | MQTT broker port |
-| `MQTT_STARTUP_TIMEOUT_SECONDS` | `10.0` | Maximum startup wait for the MQTT listener |
+| `CELINE_MQTT_HOST` | `host.docker.internal` | MQTT broker host |
+| `CELINE_MQTT_PORT` | `1883` | MQTT broker port |
+| `MQTT_STARTUP_TIMEOUT_SECONDS` | `30.0` | Maximum startup wait for the MQTT listener |
 | `JWT_HEADER_NAME` | `x-auth-request-access-token` | Header carrying the bearer token (set by OAuth2 Proxy) |
+
+Prefixed names come from `celine-sdk`'s own settings models and are doubly prefixed by
+construction: `CELINE_POLICIES_` + `policies_dir`. Three rows of this table named
+variables that do not exist until 2026-08-15 — `CELINE_POLICIES_DIR` and `MQTT__HOST` are
+both silently ignored, so following the old table left the service on its permissive
+policy fallback with no indication. `.env.example` was correct throughout and is the
+reference if the two ever disagree again.
+
+The default policies path is **relative**, so the bundle loads only when the process's
+working directory is the repository root. See
+`.agents/knowledge/the-policy-engine-fails-open.md`.
+
+## Tests
+
+```bash
+task test                            # the whole suite, ~11s
+task test -- -k "network"            # one test
+task test -- tests/unit/test_policy.py
+```
+
+No PostgreSQL, no Digital Twin, no nudging-tool, no MQTT broker and no network. The
+database is real SQLAlchemy on SQLite, and `policies/grid.rego` is evaluated for real —
+the suite refuses to start if the bundle does not load, because the policy fails open and
+an unloaded bundle would make every authorisation test pass for the wrong reason.
+
+- What the service must do, as numbered requirements: `docs/specifications/`
+- Why the suite is shaped this way: `docs/decisions/`
+- How to test a change, and what `task test` cannot see: `.agents/playbooks/testing.md`
 
 ## Database migrations
 

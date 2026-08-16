@@ -19,8 +19,25 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "python-semantic-release>=10.5.3",
+    "aiosqlite>=0.21.0",
     "debugpy>=1.8.20",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "python-semantic-release>=10.5.3",
+]
+
+# The suite reaches no external service: PostgreSQL, the Digital Twin, nudging-tool,
+# the MQTT broker and Keycloak's JWKS are all faked. OPA is the exception and is
+# deliberately real — see ADR-0002 and .agents/playbooks/testing.md.
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+  # celine-sdk's generated OpenAPI models still use Pydantic v1 config. Ours to
+  # neither fix nor read past on every run.
+  "ignore::pydantic.PydanticDeprecatedSince20",
 ]
 
 [build-system]

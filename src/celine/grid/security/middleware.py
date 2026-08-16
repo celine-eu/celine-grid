@@ -16,6 +16,8 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from celine.grid.settings import settings
+
 logger = logging.getLogger(__name__)
 
 # Paths that require no authentication at all
@@ -30,7 +32,14 @@ _PUBLIC = frozenset(
 
 
 def _has_token(request: Request) -> bool:
-    if request.headers.get("x-auth-request-access-token"):
+    """Mirror `api/deps.py::_extract_token` — the same two headers, in the same order.
+
+    The header name must come from settings here as it does there. This gate runs
+    before routing, so a middleware that only knew the default name would refuse every
+    request the moment `JWT_HEADER_NAME` was changed, without the dependency that
+    honours the setting ever running.
+    """
+    if request.headers.get(settings.jwt_header_name):
         return True
     auth = request.headers.get("authorization", "")
     return auth.lower().startswith("bearer ")

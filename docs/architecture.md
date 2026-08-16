@@ -21,8 +21,8 @@ MQTT broker ──► pipeline_listener ──► alert_dispatcher ──► nud
 
 Every protected request passes through two security layers before reaching a route handler:
 
-1. **`PolicyMiddleware`** (`security/middleware.py`) — rejects requests with no recognisable token with `401` before any route handler is invoked. Public paths (`/health`, `/api/docs`, `/api/redoc`, `/api/openapi.json`) bypass this check.
-2. **FastAPI dependency** (`api/deps.py`) — decodes the JWT via `JwtUser.from_token`, then delegates to `GridAccessPolicy` to perform an OPA evaluation for the specific action.
+1. **`PolicyMiddleware`** (`src/celine/grid/security/middleware.py`) — rejects requests with no recognisable token with `401` before any route handler is invoked. Public paths (`/health`, `/api/docs`, `/api/redoc`, `/api/openapi.json`) bypass this check.
+2. **FastAPI dependency** (`src/celine/grid/api/deps.py`) — decodes the JWT via `JwtUser.from_token`, then delegates to `GridAccessPolicy` to perform an OPA evaluation for the specific action.
 
 ## Authentication
 
@@ -39,11 +39,20 @@ The header name is configurable via `JWT_HEADER_NAME`.
 
 | Action | Who may proceed |
 |---|---|
-| `read` | DSO users whose org alias matches the requested `network_id`; service accounts with `grid.read` or `grid.admin` scope |
-| `alerts.read` | Any authenticated non-service user (ownership enforced at DB query level by `user_id = sub`) |
-| `alerts.write` | DSO users with `grid.alerts.write` or `grid.admin` scope |
+| `read` | DSO users whose org alias matches the requested `network_id` — **no scope required, and no scope widens it**; service accounts with `grid.read` or `grid.admin` scope |
+| `alerts.read` | Any authenticated non-service user, with no scope and no organisation required (ownership enforced at DB query level by `user_id = sub`); service accounts with `grid.admin` |
+| `alerts.write` | Any non-service user belonging to a DSO organisation, with no scope required; service accounts with `grid.admin` |
 
-The `GridAccessPolicy` class (`security/policy.py`) loads the Rego bundle once at import time and evaluates decisions per request. When the policy engine is unavailable (e.g. local dev without OPA), the policy falls back to permissive — `allow=True`.
+**`policies/grid.rego` is the specification of record for the table above.** Several
+docstrings in `src/celine/grid/api/deps.py` describe scope requirements — `grid.alerts.read`,
+`grid.alerts.write` — that the Rego does not impose and that appear nowhere in it. The
+Rego is what runs; see `.agents/knowledge/what-the-policy-actually-requires.md`, and
+`docs/specifications/authorisation.md` for the behaviour stated as requirements.
+
+The consequence worth stating here: **alert-rule confidentiality rests on the
+`WHERE user_id = :sub` in `src/celine/grid/api/alerts.py`, not on the policy.**
+
+The `GridAccessPolicy` class (`src/celine/grid/security/policy.py`) loads the Rego bundle once at import time and evaluates decisions per request — in process, via `regorus`, with no OPA server involved. When the policy engine is unavailable (e.g. a working directory from which the relative default `./policies` does not resolve), the policy falls back to permissive — `allow=True`.
 
 DSO network identity comes from the Keycloak organisation claim on the JWT. The first organisation with `type=dso` becomes the user's `network_id`; `resolve_dso_network()` raises HTTP 403 if no such organisation is present.
 
@@ -78,16 +87,18 @@ Rule ownership is enforced at the SQL query level (`WHERE user_id = :sub`), not 
 
 ## Pipeline listener and alert dispatch
 
-`services/pipeline_listener.py` subscribes to `celine/pipelines/runs/+` on startup. When a `PipelineRunEvent` with `status=completed` and `flow=grid-resilience-flow` arrives, it calls `dispatch_grid_alerts()`.
+`src/celine/grid/services/pipeline_listener.py` subscribes to `celine/pipelines/runs/+` on startup. When a `PipelineRunEvent` with `status=completed` and `flow=grid-resilience-flow` arrives, it calls `dispatch_grid_alerts()`.
 
-The dispatcher (`services/alert_dispatcher.py`):
+The dispatcher (`src/celine/grid/services/alert_dispatcher.py`):
 
 1. Fetches current `wind_alert_distribution` and `heat_alert_distribution` from the DT for the event's `namespace` (= `network_id`).
 2. Loads all active `AlertRule` rows for that `network_id`.
 3. For each rule, checks whether the distribution contains events at or above the rule's threshold (`WARNING` floor = `{WARNING, ALERT}`; `ALERT` floor = `{ALERT}`).
-4. For each triggered rule, emits a `grid_alert` `DigitalTwinEvent` to the nudging-tool via `NudgingAdminClient`.
+4. For each triggered rule, emits an **`extr_event`** `DigitalTwinEvent` to the nudging-tool via `NudgingAdminClient`, carrying the pipeline's `period`, `window_start` and `window_end` in its facts. The hazard reported is `wind`, `heat`, or `thunderstorm` when a rule watching both triggers on both.
 
-If the MQTT broker is unavailable at startup, the listener logs a warning and the rest of the service continues to operate normally.
+Dispatch is cancelled entirely — before the Digital Twin is queried — if any of the three window fields is missing from the pipeline event.
+
+If the MQTT broker is unavailable at startup, the listener logs a warning and the rest of the service continues to operate normally. Alert dispatch is then inactive for the life of the process, and no endpoint reports this. That is one of several paths here that degrade silently; they are collected in `.agents/knowledge/silence-is-the-failure-mode.md`.
 
 ## Database
 
@@ -112,10 +123,19 @@ Migrations are managed by Alembic in the `alembic/` directory. The `docker-compo
 
 ## Key design decisions
 
-**DSO org alias as network_id** — the Keycloak organisation alias is used directly as the `network_id` for DT queries. No mapping table is needed; org management in Keycloak is the single source of truth.
+**DSO org alias as network_id** — the Keycloak organisation alias is used directly as the `network_id` for DT queries. No mapping table is needed; org management in Keycloak is the single source of truth. The same string is also the Prefect namespace the pipeline listener reads, so one unmapped identifier spans three systems — see `.agents/knowledge/one-operator-one-network.md`.
 
-**Permissive OPA fallback** — the policy engine falls back to allow-all when unavailable so development environments without a running OPA instance stay functional. Production deployments always have the policies directory present in the container.
+**Permissive OPA fallback** — the policy engine falls back to allow-all when unavailable so development environments without a running OPA instance stay functional. Production deployments always have the policies directory present in the container. The cost is that a permit and a bypass are indistinguishable from a response; `.agents/knowledge/the-policy-engine-fails-open.md` says what to do about it, and it is why the test suite refuses to run without a loaded bundle.
 
 **Pipeline listener vs polling** — alert dispatch is event-driven (MQTT) rather than scheduled. This avoids unnecessary DT queries and ensures alerts fire promptly after each pipeline run without coupling the BFF to a scheduler.
 
-**Thin BFF pattern** — celine-grid performs no risk calculations. All domain logic lives in the Digital Twin. The BFF's job is routing, authentication, authorization, and persistence of user preferences.
+**Thin BFF pattern** — celine-grid performs no risk calculations. All domain logic lives in the Digital Twin. The BFF's job is routing, authentication, authorization, and persistence of user preferences. `/api/grid/{network_id}/shapes` is the only exception: it assembles a GeoJSON FeatureCollection from the DT's rows, which is presentation rather than domain logic.
+
+## Where the rest is written down
+
+| Looking for | Go to |
+|---|---|
+| what the service must do, stated so a test can name it | `docs/specifications/` |
+| why a technical choice was made | `docs/decisions/` |
+| what is true of the code and not visible in it | `.agents/knowledge/` |
+| how to test a change | `.agents/playbooks/testing.md` |

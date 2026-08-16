@@ -5,3 +5,15 @@ dist
 build
 .env
 .venv
+
+# Test and tooling caches
+.pytest_cache
+
+# Execution state: transient, and the plan is what survives
+.agents/work/
+
+# Values the register declares. The register itself is committed; this is not.
+.agents/references.local.md
+
+# Agent material is not published from this repository.
+.agents/

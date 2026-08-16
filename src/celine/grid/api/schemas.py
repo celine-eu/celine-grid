@@ -12,7 +12,10 @@ from pydantic import BaseModel, field_validator
 
 class MeUser(BaseModel):
     sub: str
-    email: str
+    # Optional because it is optional in the token: `email` is not a mandatory Keycloak
+    # claim, and a realm that does not map it into the access token would otherwise make
+    # /api/me — the frontend's first call — a 500 for a perfectly valid DSO member.
+    email: Optional[str] = None
     name: Optional[str] = None
     preferred_username: Optional[str] = None
     locale: Optional[str] = None

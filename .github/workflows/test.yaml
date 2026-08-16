@@ -1,0 +1,137 @@
+### Test celine-grid.
+#
+# One job, because the suite needs nothing: no PostgreSQL, no Digital Twin, no broker,
+# no OPA server. That is ADR-0003, and running it on every supported Python is what
+# stops a version-gated import from reaching a release.
+#
+# Two checks are added on top of `task test`, and both catch things pytest cannot:
+#
+#   * importing every submodule, because the fakes keep most of this package's heavier
+#     dependencies out of the suite's path and a module no test touches can still fail
+#     to import
+#   * the requirement trace, checked both ways — see docs/specifications/index.md
+#
+# What is deliberately absent: a PostgreSQL job. The database tests run on SQLite and
+# the migrations are exercised by nothing. ADR-0004 states that gap; closing it is owed
+# work recorded in .agents/plans/first-test-suite.md, not an oversight here.
+
+name: Test celine-grid
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "policies/**"
+      - "docs/specifications/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/test.yaml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "policies/**"
+      - "docs/specifications/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/test.yaml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 1
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    name: Test on ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: uv sync --python ${{ matrix.python-version }}
+
+      - name: Test
+        run: uv run --python ${{ matrix.python-version }} pytest
+
+      # `regorus` is a compiled dependency and the whole suite refuses to start without
+      # it (ADR-0002). Said out loud here so a wheel missing for a Python version is
+      # reported as itself rather than as 200 collection errors.
+      - name: The policy bundle loads
+        run: |
+          uv run --python ${{ matrix.python-version }} python - <<'EOF'
+          from celine.grid.security.policy import policy
+          assert policy._engine is not None, "OPA bundle did not load"
+          assert policy._engine.has_package("celine.grid.access")
+          print("policy bundle loaded:", policy._engine.get_packages())
+          EOF
+
+      # The fakes keep most of this package's dependencies out of the suite's path, so
+      # importing every module is the only thing that proves they all load at all.
+      - name: Import every submodule
+        run: |
+          uv run --python ${{ matrix.python-version }} python - <<'EOF'
+          import importlib, pkgutil, sys
+          import celine.grid as pkg
+
+          names = ["celine.grid"] + [
+              m.name for m in pkgutil.walk_packages(pkg.__path__, "celine.grid.")
+          ]
+          failed = []
+          for name in names:
+              try:
+                  importlib.import_module(name)
+              except Exception as exc:
+                  failed.append(f"{name}: {exc!r}")
+          if failed:
+              print("\n".join(failed))
+              sys.exit(1)
+          print(f"imported {len(names)} modules")
+          EOF
+
+  trace:
+    name: Requirement trace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      # Checked both ways. A requirement with no test declaring it is unverified; a
+      # test declaring one that is not specified is a typo, and a typo in a trace tag
+      # is indistinguishable from coverage until someone reads the matrix.
+      - name: Every requirement is verified, and every tag names one
+        run: |
+          grep -rho --include='*.py' '@verifies REQ-[0-9]\{4\}' tests/ | sed 's/@verifies //' | sort -u > /tmp/tagged
+          grep -rho '^### REQ-[0-9]\{4\}' docs/specifications/ | sed 's/^### //' | sort -u > /tmp/specified
+
+          untested=$(comm -13 /tmp/tagged /tmp/specified)
+          unspecified=$(comm -23 /tmp/tagged /tmp/specified)
+
+          if [ -n "$untested" ]; then
+            echo "::error::specified but no test declares them:"; echo "$untested"
+          fi
+          if [ -n "$unspecified" ]; then
+            echo "::error::declared by a test but not specified:"; echo "$unspecified"
+          fi
+          [ -z "$untested" ] && [ -z "$unspecified" ]
+
+          echo "$(wc -l < /tmp/specified) requirements, all verified"
