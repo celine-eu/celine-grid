@@ -46,7 +46,7 @@ The header name is configurable via `JWT_HEADER_NAME`.
 **`policies/grid.rego` is the specification of record for the table above.** Several
 docstrings in `src/celine/grid/api/deps.py` describe scope requirements — `grid.alerts.read`,
 `grid.alerts.write` — that the Rego does not impose and that appear nowhere in it. The
-Rego is what runs; see `.agents/knowledge/what-the-policy-actually-requires.md`, and
+Rego is what runs; see the companion's knowledge, and
 `docs/specifications/authorisation.md` for the behaviour stated as requirements.
 
 The consequence worth stating here: **alert-rule confidentiality rests on the
@@ -98,7 +98,7 @@ The dispatcher (`src/celine/grid/services/alert_dispatcher.py`):
 
 Dispatch is cancelled entirely — before the Digital Twin is queried — if any of the three window fields is missing from the pipeline event.
 
-If the MQTT broker is unavailable at startup, the listener logs a warning and the rest of the service continues to operate normally. Alert dispatch is then inactive for the life of the process, and no endpoint reports this. That is one of several paths here that degrade silently; they are collected in `.agents/knowledge/silence-is-the-failure-mode.md`.
+If the MQTT broker is unavailable at startup, the listener logs a warning and the rest of the service continues to operate normally. Alert dispatch is then inactive for the life of the process, and no endpoint reports this. That is one of several paths here that degrade silently; they are collected in the companion's knowledge.
 
 ## Database
 
@@ -123,9 +123,9 @@ Migrations are managed by Alembic in the `alembic/` directory. The `docker-compo
 
 ## Key design decisions
 
-**DSO org alias as network_id** — the Keycloak organisation alias is used directly as the `network_id` for DT queries. No mapping table is needed; org management in Keycloak is the single source of truth. The same string is also the Prefect namespace the pipeline listener reads, so one unmapped identifier spans three systems — see `.agents/knowledge/one-operator-one-network.md`.
+**DSO org alias as network_id** — the Keycloak organisation alias is used directly as the `network_id` for DT queries. No mapping table is needed; org management in Keycloak is the single source of truth. The same string is also the Prefect namespace the pipeline listener reads, so one unmapped identifier spans three systems.
 
-**Permissive OPA fallback** — the policy engine falls back to allow-all when unavailable so development environments without a running OPA instance stay functional. Production deployments always have the policies directory present in the container. The cost is that a permit and a bypass are indistinguishable from a response; `.agents/knowledge/the-policy-engine-fails-open.md` says what to do about it, and it is why the test suite refuses to run without a loaded bundle.
+**Permissive OPA fallback** — the policy engine falls back to allow-all when unavailable so development environments without a running OPA instance stay functional. Production deployments always have the policies directory present in the container. The cost is that a permit and a bypass are indistinguishable from a response, which is why the test suite refuses to run without a loaded bundle.
 
 **Pipeline listener vs polling** — alert dispatch is event-driven (MQTT) rather than scheduled. This avoids unnecessary DT queries and ensures alerts fire promptly after each pipeline run without coupling the BFF to a scheduler.
 
@@ -137,5 +137,5 @@ Migrations are managed by Alembic in the `alembic/` directory. The `docker-compo
 |---|---|
 | what the service must do, stated so a test can name it | `docs/specifications/` |
 | why a technical choice was made | `docs/decisions/` |
-| what is true of the code and not visible in it | `.agents/knowledge/` |
-| how to test a change | `.agents/playbooks/testing.md` |
+| what is true of the code and not visible in it | the companion's knowledge |
+| how to test a change | the companion's testing playbook |

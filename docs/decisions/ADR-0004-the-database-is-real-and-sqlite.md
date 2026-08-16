@@ -50,5 +50,5 @@ Three things it does not prove, all of which need PostgreSQL:
 
 `../celine-ai-assistant` closes the first two with a CI job that re-runs its database
 tests against a real PostgreSQL service container (its ADR-0007). Doing the same here is
-the obvious next step and is recorded in `.agents/plans/first-test-suite.md` as owed, not
+the obvious next step and is recorded in the companion's plans as owed, not
 done.

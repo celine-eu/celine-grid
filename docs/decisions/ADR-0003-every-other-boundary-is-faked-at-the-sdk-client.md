@@ -50,7 +50,7 @@ Fake as little as possible within each boundary:
 fakes describe what this repository *assumes*, written from this repository. If the SDK
 renames a field or returns models where it returned `to_dict()`-able rows, every test
 still passes and the affected call fails in production. This is the stated cost, not an
-oversight — `.agents/knowledge/faking-the-sdk-boundary.md` says what to do after an SDK
+oversight — the companion's knowledge says what to do after an SDK
 bump, and `test_grid_proxy.py` pins the one place a shape change surfaces as an unhandled
 `500` rather than a handled error.
 

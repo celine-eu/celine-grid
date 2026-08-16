@@ -26,7 +26,7 @@ async def test_an_operator_may_not_read_another_dso_s_network(policy):
     """@verifies REQ-0006"""
 ```
 
-The mapping is a projection of the two and is never written by hand. `.agents/harness.toml`
+The mapping is a projection of the two and is never written by hand. the harness profile
 names no traceability provider, so until the harness checker is available in this
 checkout the projection is a grep — `--include='*.py'` because `__pycache__` matches
 otherwise:
@@ -58,5 +58,5 @@ same change.
 
 - **Why** a choice was made — `docs/decisions/`.
 - What the system *is* — `docs/architecture.md`.
-- A trap that is true of the code and not obvious from it — `.agents/knowledge/`.
+- A trap that is true of the code and not obvious from it — the companion's knowledge.
 - Anything broken — the issue tracker.

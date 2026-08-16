@@ -3,8 +3,7 @@
 Every decision below is made by `policies/grid.rego`, evaluated in process. **The Rego is
 the specification of record.** Several docstrings in `src/celine/grid/api/deps.py` and an earlier version
 of `docs/architecture.md` describe scope requirements the Rego does not impose; where they
-disagree, what follows is what runs. See
-`.agents/knowledge/what-the-policy-actually-requires.md`.
+disagree, what follows is what runs.
 
 ---
 
@@ -63,7 +62,7 @@ No scope is consulted. Organisation membership is the whole check.
 
 An operator removed from their organisation in Keycloak keeps their existing rules and
 loses the ability to edit or delete them — and those rules keep firing, because dispatch
-never consults the policy. See `.agents/knowledge/a-rule-outlives-its-author.md`.
+never consults the policy.
 
 ### REQ-0012 — a service account needs `grid.admin` to touch alert rules
 
