@@ -5,13 +5,13 @@ requires-python = ">=3.12"
 readme = "README.md"
 dependencies = [
   "fastapi>=0.136.1",
-  "pydantic>=2.13.3",
-  "pydantic-settings>=2.14.0",
+  "pydantic>=2.13.4",
+  "pydantic-settings>=2.14.2",
   "uvicorn[standard]>=0.46.0",
-  "sqlalchemy>=2.0.0",
+  "sqlalchemy>=2.0.51",
   "asyncpg>=0.31.0",
   "psycopg2-binary>=2.9.12",
-  "alembic>=1.13.0",
+  "alembic>=1.18.5",
   "sqlalchemy-utils>=0.42.1",
   "celine-sdk>=1.13.0",
 ]
