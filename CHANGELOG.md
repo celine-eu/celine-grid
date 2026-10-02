@@ -2,6 +2,24 @@
 
 <!-- version list -->
 
+## v1.3.0 (2026-10-02)
+
+### Chores
+
+- Update sdk
+  ([`f48403a`](https://github.com/celine-eu/celine-grid/commit/f48403a1753b49199c0716a3ffc6124a6a7aeb6a))
+
+### Features
+
+- **alerts**: DSO risk report with GRID_ALERTS_ENABLED kill switch (off by default)
+  ([`7e28a78`](https://github.com/celine-eu/celine-grid/commit/7e28a7899abd2077e724610785e424a9a0eb32f4))
+
+### Testing
+
+- Fix CI errors
+  ([`fc20854`](https://github.com/celine-eu/celine-grid/commit/fc20854cb28e17fc98a35362f23cc54f1101356b))
+
+
 ## v1.2.0 (2026-07-02)
 
 ### Chores
