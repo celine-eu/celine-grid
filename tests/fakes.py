@@ -189,6 +189,8 @@ class FakeGridClient:
                 "risks": FetchResult([]),
                 "risks_now": FetchResult([]),
                 "trendline": FetchResult([]),
+                # generic values call, used by /risk-km (fetcher id in args[1])
+                "fetch_values": FetchResult([]),
             }
         )
         self.calls: list[tuple[str, tuple, dict]] = []

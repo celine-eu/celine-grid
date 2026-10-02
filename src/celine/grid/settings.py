@@ -51,8 +51,20 @@ class Settings(BaseSettings):
     # OPA policy engine — CELINE_POLICIES_DIR overrides the directory
     policies: PoliciesSettings = Field(default_factory=PoliciesSettings)
 
+    # Kill switch for DSO alert dispatch (GRID_ALERTS_ENABLED). Off by default: a
+    # completed grid run only dispatches nudges (and therefore e-mails) once enabled.
+    grid_alerts_enabled: bool = False
+
     # Grid resilience pipeline flow name (as emitted by the DT pipeline)
     grid_pipeline_flow: str = "grid-resilience-flow"
+    # The Prefect namespace celine-pipelines publishes the grid flow under
+    # (celine-utils `get_namespace("grid")` → "grid" or "<base>.grid"). A completed run
+    # under it evaluates the alert rules of every network that has one.
+    grid_pipeline_namespace: str = "grid"
+    # Forecast dates a run evaluates: run date .. run date + horizon - 1
+    grid_alert_horizon_days: int = 3
+    # Public URL of the grid UI, linked from the alert e-mail
+    public_app_url: str = "http://grid.celine.localhost"
 
 
 settings = Settings()

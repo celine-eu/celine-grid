@@ -28,12 +28,16 @@ nothing at any endpoint says so.
 The handler also refuses to dispatch before the Digital Twin and nudging clients exist,
 rather than raising inside the broker's callback.
 
+**Alert dispatch has a kill switch.** `GRID_ALERTS_ENABLED` (default `false`) must be
+`true` for a completed run to dispatch anything; while it is off the listener only logs
+that it skipped the run (see REQ-0029). Nothing at any endpoint reports the setting.
+
 ### REQ-0041 — an unavailable Digital Twin does not stop dispatch
 
-The wind and heat distributions are fetched independently and each failure is swallowed, so
-a heat rule still fires when the wind query is down.
+The single `risk_km` query is caught and logged; dispatch returns zero and the listener
+moves on to the next network.
 
-**When both fail, dispatch sends nothing — the same observation as a genuinely calm day.**
+**When it fails, dispatch sends nothing — the same observation as a genuinely calm day.**
 A Digital Twin that is down therefore looks exactly like good weather, and nothing raises
 an alarm about the absence of alerts.
 

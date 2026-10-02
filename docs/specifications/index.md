@@ -53,6 +53,11 @@ same change.
 | REQ-0022 – REQ-0028 | [the grid proxy](grid-proxy.md) — what is forwarded to the Digital Twin |
 | REQ-0029 – REQ-0038 | [alert dispatch](alert-dispatch.md) — what happens when a pipeline finishes |
 | REQ-0039 – REQ-0044 | [operability](operability.md) — running, degrading, and failing |
+| REQ-0045 | [the grid proxy](grid-proxy.md) — the risk exposure table (`/risk-km`) |
+| REQ-0046 | [alert dispatch](alert-dispatch.md) — the content of the DSO risk report |
+| REQ-0047 | [the grid proxy](grid-proxy.md) — the tree-strike overlay (`/tree-strike-spans`) |
+| REQ-0048 | [the grid proxy](grid-proxy.md) — the intra-day risks (`/risks-8h`) |
+| REQ-0049 | [the grid proxy](grid-proxy.md) — `asset_type=joint` on `/shapes` |
 
 ## What is not here
 

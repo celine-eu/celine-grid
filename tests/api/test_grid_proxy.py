@@ -35,6 +35,9 @@ ROUTES = [
     ("/risks", "risks"),
     ("/risks-now", "risks_now"),
     ("/trendline?date_from=2026-08-01&date_to=2026-08-15", "trendline"),
+    ("/risk-km?dates=2026-09-11", "fetch_values"),
+    ("/tree-strike-spans", "fetch_values"),
+    ("/risks-8h?dates=2026-09-11", "fetch_values"),
 ]
 
 ROUTE_IDS = [call for _path, call in ROUTES]
@@ -210,7 +213,7 @@ async def test_an_error_that_is_not_a_dt_error_is_not_caught(client, dso_user, d
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("path", ["/tile-index", "/shapes"])
+@pytest.mark.parametrize("path", ["/tile-index", "/shapes", "/tree-strike-spans"])
 # @verifies REQ-0028
 async def test_the_static_topology_is_cacheable_for_an_hour(client, dso_user, path):
     """
@@ -224,7 +227,10 @@ async def test_the_static_topology_is_cacheable_for_an_hour(client, dso_user, pa
     assert response.headers["cache-control"] == "public, max-age=3600"
 
 
-@pytest.mark.parametrize("path", ["/risks", "/risks-now", "/summary", "/wind/map"])
+@pytest.mark.parametrize(
+    "path",
+    ["/risks", "/risks-now", "/summary", "/wind/map", "/risk-km?dates=2026-09-11", "/risks-8h?dates=2026-09-11"]
+)
 # @verifies REQ-0028
 async def test_the_risk_surfaces_are_not_cached(client, dso_user, path):
     """
@@ -233,6 +239,137 @@ async def test_the_risk_surfaces_are_not_cached(client, dso_user, path):
     response = await client.get(url(path), headers=dso_user)
 
     assert "cache-control" not in response.headers
+
+
+# ---------------------------------------------------------------------------
+# /risk-km — the exposure table, through the generic values call
+# ---------------------------------------------------------------------------
+
+
+# @verifies REQ-0045
+async def test_risk_km_asks_the_generic_values_call_for_the_risk_km_fetcher(
+    client, dso_user, dt
+):
+    """
+    Not a named SDK method: the service stays on the SDK it is pinned to and names
+    the fetcher itself, so a Digital Twin that gained the fetcher is enough.
+    """
+    response = await client.get(url("/risk-km?dates=2026-09-11"), headers=dso_user)
+
+    assert response.status_code == 200, response.text
+    _called, args, kwargs = dt.grid.calls[0]
+    assert args[:2] == (NETWORK, "risk_km")
+    assert kwargs["limit"] == 20000
+    assert response.json() == {"items": [], "count": 0}
+
+
+# @verifies REQ-0045
+async def test_risk_km_forwards_only_the_filters_it_was_given(client, dso_user, dt):
+    """
+    Absent filters are absent from the payload — the Digital Twin applies its own
+    defaults (`level` = tratta) and treats a missing filter as "all".
+    """
+    await client.get(url("/risk-km?dates=2026-09-11&dates=2026-09-12"), headers=dso_user)
+    payload = dt.grid.calls[0][1][2]
+    assert payload == {"dates": ["2026-09-11", "2026-09-12"]}
+
+    await client.get(
+        url("/risk-km")
+        + "?dates=2026-09-11&level=unit&risk_vector=wind&operational_unit=U1"
+        + "&operational_unit=U2&line_name=TENNA&substation_name=VARENA&min_level=ALERT",
+        headers=dso_user,
+    )
+    payload = dt.grid.calls[1][1][2]
+    assert payload == {
+        "dates": ["2026-09-11"],
+        "level": "unit",
+        "risk_vector": ["wind"],
+        "operational_unit": ["U1", "U2"],
+        "line_name": ["TENNA"],
+        "substation_name": ["VARENA"],
+        "min_level": "ALERT",
+    }
+
+
+# @verifies REQ-0045
+async def test_risk_km_requires_at_least_one_date(client, dso_user, dt):
+    assert (await client.get(url("/risk-km"), headers=dso_user)).status_code == 422
+    assert dt.grid.calls == []
+
+
+# @verifies REQ-0045
+async def test_risk_km_refuses_a_level_it_does_not_know(client, dso_user, dt):
+    response = await client.get(url("/risk-km?dates=2026-09-11&level=feeder"), headers=dso_user)
+    assert response.status_code == 422
+    assert dt.grid.calls == []
+
+
+# ---------------------------------------------------------------------------
+# /risks-8h — the intra-day view, through the generic values call
+# ---------------------------------------------------------------------------
+
+
+# @verifies REQ-0048
+async def test_risks_8h_forwards_dates_slots_and_vectors_to_the_risks_8h_fetcher(
+    client, dso_user, dt
+):
+    response = await client.get(
+        url("/risks-8h?dates=2026-09-11&dates=2026-09-12&slot=1&slot=2&risk_vector=wind"),
+        headers=dso_user,
+    )
+
+    assert response.status_code == 200, response.text
+    _called, args, kwargs = dt.grid.calls[0]
+    assert args[:2] == (NETWORK, "risks_8h")
+    assert args[2] == {"dates": ["2026-09-11", "2026-09-12"], "slots": [1, 2], "risk_vector": ["wind"]}
+    assert kwargs["limit"] == 30000
+
+
+# @verifies REQ-0048
+async def test_risks_8h_requires_dates_and_refuses_a_slot_outside_the_day(client, dso_user, dt):
+    assert (await client.get(url("/risks-8h"), headers=dso_user)).status_code == 422
+    assert (await client.get(url("/risks-8h?dates=2026-09-11&slot=3"), headers=dso_user)).status_code == 422
+    assert dt.grid.calls == []
+
+
+# ---------------------------------------------------------------------------
+# /tree-strike-spans — the overlay, assembled like /shapes
+# ---------------------------------------------------------------------------
+
+
+# @verifies REQ-0047
+async def test_tree_strike_spans_are_assembled_into_a_feature_collection(client, dso_user, dt):
+    dt.grid.set(
+        "fetch_values",
+        FetchResult(
+            [
+                {
+                    "span_id": "s1",
+                    "tier": "high",
+                    "feature_geojson": '{"type":"Feature","geometry":{"type":"LineString","coordinates":[[0,0],[1,1]]},"properties":{}}',
+                }
+            ]
+        ),
+    )
+
+    response = await client.get(url("/tree-strike-spans?tile_id=tile_0_1&tile_id=tile_0_2"), headers=dso_user)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["type"] == "FeatureCollection"
+    assert body["features"][0]["properties"] == {"span_id": "s1", "tier": "high"}
+    assert body["features"][0]["geometry"]["type"] == "LineString"
+    _called, args, kwargs = dt.grid.calls[0]
+    assert args[:2] == (NETWORK, "tree_strike_spans")
+    assert args[2] == {"tile_ids": ["tile_0_1", "tile_0_2"]}
+    assert kwargs["limit"] == 5000
+
+
+# @verifies REQ-0047
+async def test_tree_strike_spans_without_tiles_asks_for_the_whole_overlay(client, dso_user, dt):
+    await client.get(url("/tree-strike-spans"), headers=dso_user)
+
+    assert dt.grid.calls[0][1][2] == {}
 
 
 # ---------------------------------------------------------------------------
@@ -384,3 +521,60 @@ async def test_no_shapes_is_an_empty_feature_collection(client, dso_user, dt):
     body = (await client.get(url("/shapes"), headers=dso_user)).json()
 
     assert body == {"type": "FeatureCollection", "features": []}
+
+
+# @verifies REQ-0049
+async def test_shapes_forwards_the_joint_asset_type_verbatim(client, dso_user, dt):
+    """
+    `asset_type=joint` is not a value the proxy knows anything about: it is opaque,
+    forwarded exactly like `line` or `cable`. Pinned because a future allow-list or enum
+    on `asset_type` would silently break the soil-temperature joint layer without any
+    other test here noticing.
+    """
+    await client.get(url("/shapes") + "?asset_type=joint", headers=dso_user)
+
+    kwargs = dt.grid.call_kwargs("shapes")
+    assert kwargs["asset_type"] == ["joint"]
+
+
+# @verifies REQ-0049
+async def test_a_joint_row_becomes_a_point_feature_with_thermal_properties(
+    client, dso_user, dt
+):
+    """
+    A joint row carries a `Point` geometry (not the `LineString`/`MultiLineString` of a
+    cable) and the thermal columns the soil-temperature work added. The assembly in
+    `_to_feature_collection` does not know about any of this: it is the same code path
+    as REQ-0026, so this pins that no special-casing is needed for it to work.
+    """
+    dt.grid.set(
+        "shapes",
+        FetchResult(
+            [
+                {
+                    "segment_id": "j1",
+                    "asset_type": "joint",
+                    "thermal_tier": "high",
+                    "technology": "RESINA",
+                    "m_r_critico": 2.5,
+                    "feature_geojson": (
+                        '{"type":"Feature","geometry":'
+                        '{"type":"Point","coordinates":[11.12,46.07]}}'
+                    ),
+                }
+            ]
+        ),
+    )
+
+    body = (await client.get(url("/shapes"), headers=dso_user)).json()
+
+    assert len(body["features"]) == 1
+    feature = body["features"][0]
+    assert feature["geometry"] == {"type": "Point", "coordinates": [11.12, 46.07]}
+    assert feature["properties"] == {
+        "segment_id": "j1",
+        "asset_type": "joint",
+        "thermal_tier": "high",
+        "technology": "RESINA",
+        "m_r_critico": 2.5,
+    }

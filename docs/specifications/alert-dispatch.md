@@ -19,28 +19,44 @@ A message that does not parse as a `PipelineRunEvent` is logged and dropped. It 
 raise out of the handler — there is no supervisor to restart the listener, and the
 subscription would be lost for the life of the process.
 
+**Dispatch is off unless `GRID_ALERTS_ENABLED=true` (default `false`).** The check comes
+after the status and flow filters: a matching completed run while disabled logs one info
+line (`Grid alerts disabled (GRID_ALERTS_ENABLED=false); skipping dispatch for flow=...`)
+and returns without touching the Digital Twin or nudging. Every manual run or full refresh
+of the grid flow emits a completed event, so without this switch each one would e-mail the
+DSO; deploying a new image is therefore inert until someone enables it explicitly.
+
 The flow name is the only filter on identity, and it is configurable, so renaming the flow
 in `../celine-pipelines` silently stops all alerting here.
 
-### REQ-0030 — the run's namespace is the network
+### REQ-0030 — the pipeline's own namespace fans out to every network with an active rule; any other namespace is a network
 
-`PipelineRunEvent.namespace` is used directly as the `network_id`. It is the third place
-the same unmapped identifier appears — Keycloak organisation alias, Digital Twin
-`network_id`, Prefect namespace — with no translation between any of them.
+`celine-pipelines` publishes the grid flow under `get_namespace("grid")` — `grid`, or
+`<base>.grid` when a base namespace is configured — never under a DSO alias. A completed
+run whose namespace is `GRID_PIPELINE_NAMESPACE` (or ends in `.` + it) therefore evaluates
+every distinct `network_id` that has an active rule, one dispatch each.
 
-Only rules carrying that `network_id` are loaded. Rules backfilled by migration 002 with
-`network_id = ''` match no real network and are therefore inert.
+A run published under any other namespace is taken as that network alone — the original
+contract, kept so a pipeline that does publish per DSO still works.
 
-### REQ-0031 — only active rules participate, and each gets its own nudge
+Rules backfilled by migration 002 with `network_id = ''` name no network and never
+participate, in either mode.
+
+### REQ-0031 — only active rules participate, and each distinct recipient list gets one report
 
 Inactive rules are excluded in SQL. A network with no active rules ends the dispatch
-before anything else happens. Every rule that triggers produces one nudge, so two
-operators watching the same network are both told.
+before the Digital Twin is queried.
+
+Triggered rules are merged per recipient list — the synthetic e-mail user, or the
+operator's `sub` when there is none. Two operators watching the same network are both
+told; two rules of one operator addressed to the same inbox produce one report naming
+every hazard that triggered, at the lower of their thresholds. nudging-tool de-duplicates
+per day on (rule, user), so sending them separately would have kept only the first.
 
 ### REQ-0032 — a threshold is a floor, and a rule watches only the hazards it names
 
-`WARNING` triggers on `WARNING` or `ALERT`; `ALERT` triggers only on `ALERT`. An operator
-asking to hear about warnings certainly wants to hear about alerts.
+`WARNING` triggers on kilometres at `WARNING` or `ALERT`; `ALERT` only on kilometres at
+`ALERT`. An operator asking to hear about warnings certainly wants to hear about alerts.
 
 A wind rule is not woken by a heat wave, and vice versa.
 
@@ -48,19 +64,18 @@ A threshold the code does not recognise falls back to the `ALERT` floor — the 
 which under-alerts rather than over-alerts. Only the API validator stops such a row
 existing.
 
-### REQ-0033 — a risk level counts only when it has events
+### REQ-0033 — a level counts only when it has kilometres
 
-The Digital Twin returns a row per level, including levels with `events: 0`. Testing for
-the row rather than the count would fire every rule on every run.
+The exposure table carries `km_alert` and `km_warning` per tratta. A rule triggers when
+any tratta of a hazard it names has kilometres at or above its floor; a `worst_level`
+string on a row with zero kilometres does not count. A row missing its fields is survived
+rather than fatal.
 
-Levels are compared case-insensitively, and a row missing its fields is survived rather
-than fatal.
+### REQ-0034 — the report names the hazards that triggered
 
-### REQ-0034 — the hazard reported is the one that triggered
-
-A wind rule that fires reports `wind`, a heat rule `heat`, and a rule watching both that
-triggers on both reports `thunderstorm` — nudging-tool's vocabulary for a combined event —
-as a single nudge, not two.
+`risk_types` in the report is the sorted list of hazards that met the floor for the
+merged rules — `["wind"]`, `["heat"]` or both — and the report body carries one block per
+named hazard. A hazard the rules watch but that is calm is not in the report.
 
 ### REQ-0035 — recipients fall back from the rule, to the settings, to the operator
 
@@ -86,23 +101,30 @@ delivery preferences and de-duplication off it.
 
 The id is not a privacy measure: the addresses travel in the same payload.
 
-### REQ-0037 — a nudge carries the pipeline's window, or is not sent
+### REQ-0037 — a report covers the run's forecast horizon, or is not sent
 
-The payload is an `extr_event` — not `grid_alert` — carrying `period`, `window_start` and
-`window_end`, which nudging-tool renders into the message an operator reads.
+The payload is a `grid_risk_report` carrying `period` (the run date), `dates` (the run
+date and the `GRID_ALERT_HORIZON_DAYS - 1` days after it — the forecast tables hold today
+plus two days), `network_id`, `threshold`, `risk_types`, `generated_at`, `app_url` and
+`email_recipients`.
 
-`period` is a date, taken from the payload or derived from the event timestamp.
-`window_start` and `window_end` are zero-padded `HH:MM`, taken from the payload only. All
-three are searched for at the top level of the payload and then inside `facts`, `payload`,
-`metadata`, `parameters`, `params` and `data`, because different pipelines put them in
-different places.
-
-**If any of the three is missing, the entire dispatch is cancelled** before the Digital
-Twin is queried. A nudge whose window reads `None` is worse than no nudge. A pipeline
-emitting `6:00` rather than `06:00` fails this and stops alerting silently.
+The run date is the date part of the event timestamp; a timestamp that cannot be read
+starts the horizon today rather than cancelling it. The Digital Twin is asked once, for
+the `risk_km` rows at tratta grain over exactly those dates, through the SDK's generic
+values call. With no dates at all nothing is asked and nothing is sent.
 
 ### REQ-0038 — one failed send does not silence the rest
 
-Each nudge is sent and caught individually, and the returned count reports what was
-actually sent. One operator's undeliverable alert must not cost the rest of the network
+Each report is sent and caught individually, and the returned count reports what was
+actually sent. One inbox's undeliverable report must not cost the rest of the network
 theirs.
+
+### REQ-0046 — the report body is the per-unit and per-line summary of the exposure table
+
+For every date of the horizon and every hazard named, the report carries: the operational
+units ordered by risk index (kilometres total, at ALERT and at WARNING, their shares, the
+worst level, the three worst lines), the lines with kilometres at or above the threshold
+ordered by index (at most fifteen), and the network totals. Kilometres are summed from the
+tratta rows and the index is recomputed from the sums — the same arithmetic as the Digital
+Twin's `line` and `unit` grains and the table page, never an average of indices — so a
+number in the e-mail can be found again in the table.

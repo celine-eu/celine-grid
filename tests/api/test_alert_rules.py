@@ -135,23 +135,20 @@ async def test_deactivating_is_how_a_rule_is_stopped_without_losing_it(
     The dispatcher's `WHERE active IS TRUE` is the other half of this, and it is the
     only thing `active` does — the rule is still listed, still owned, still editable.
     """
-    from tests.fakes import FakeNudgingClient
+    from tests.fakes import FakeNudgingClient, FetchResult
     from celine.grid.services.alert_dispatcher import dispatch_grid_alerts
 
     rule = await create(client, dso_user)
     await client.patch(
         f"/api/alert-rules/{rule['id']}", json={"active": False}, headers=dso_user
     )
-    dt.grid.set("wind_alert_distribution", [{"risk_level": "ALERT", "events": 5}])
+    dt.grid.set(
+        "fetch_values",
+        FetchResult([{"date": "2026-08-15", "risk_vector": "wind", "km_alert": 5.0, "km_total": 5.0}]),
+    )
 
     sent = await dispatch_grid_alerts(
-        NETWORK,
-        dt,
-        FakeNudgingClient(),
-        db,
-        period="2026-08-15",
-        window_start="06:00",
-        window_end="18:00",
+        NETWORK, dt, FakeNudgingClient(), db, dates=["2026-08-15"]
     )
 
     assert sent == 0
@@ -407,7 +404,7 @@ async def test_settings_recipients_reach_the_dispatcher(client, db, dso_user, dt
     The join the two halves of this service make: what the API writes is what the MQTT
     listener reads, and nothing else connects them.
     """
-    from tests.fakes import FakeNudgingClient
+    from tests.fakes import FakeNudgingClient, FetchResult
     from celine.grid.services.alert_dispatcher import dispatch_grid_alerts
 
     await client.put(
@@ -416,18 +413,13 @@ async def test_settings_recipients_reach_the_dispatcher(client, db, dso_user, dt
         headers=dso_user,
     )
     await create(client, dso_user)
-    dt.grid.set("wind_alert_distribution", [{"risk_level": "ALERT", "events": 1}])
+    dt.grid.set(
+        "fetch_values",
+        FetchResult([{"date": "2026-08-15", "risk_vector": "wind", "km_alert": 1.0, "km_total": 1.0}]),
+    )
 
     nudging = FakeNudgingClient()
-    sent = await dispatch_grid_alerts(
-        NETWORK,
-        dt,
-        nudging,
-        db,
-        period="2026-08-15",
-        window_start="06:00",
-        window_end="18:00",
-    )
+    sent = await dispatch_grid_alerts(NETWORK, dt, nudging, db, dates=["2026-08-15"])
 
     assert sent == 1
     assert nudging.payloads()[0]["facts"]["email_recipients"] == ["ops@example.test"]
