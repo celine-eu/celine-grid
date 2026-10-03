@@ -64,13 +64,33 @@ This runs `db-create`, `migrate`, and the `api` container in order.
 
 All settings are read from environment variables or a `.env` file. The table below lists the most relevant variables.
 
+### Posture: `CELINE_ENV=dev` is required for the dev defaults
+
+The defaults below are **development** defaults (the local database password, a client
+secret equal to the client id, the local Keycloak). They are accepted only when the
+process environment says `CELINE_ENV=dev` (or `ENVIRONMENT=dev`). **Unset means
+hardened**: so does `staging`, `prod` or anything else. Outside dev the service refuses
+to start (`InsecureConfiguration`, listing every offending variable) while any of them is
+still in use or the policy bundle did not load, and a policy engine that is missing or
+raises denies instead of allowing. See REQ-0013 and REQ-0050.
+
+- `task run` / `task debug` export `CELINE_ENV=dev` for you.
+- `CELINE_ENV=staging task run` is the prod-like local mode; set real values first.
+- `docker compose up` passes only what `.env` holds — add `CELINE_ENV=dev` there for a
+  local container.
+- The check reads the real process environment, not `.env` via pydantic.
+
+This needs `celine.sdk.posture`, which is **not yet in a released celine-sdk** — the
+next release after 1.24.0. Until then it works only against an editable SDK checkout.
+
 | Variable | Default | Description |
 |---|---|---|
+| `CELINE_ENV` | — (unset = hardened) | `dev` relaxes the posture checks; anything else is hardened |
 | `DATABASE_URL` | `postgresql+asyncpg://postgres:securepassword123@host.docker.internal:15432/grid` | PostgreSQL DSN |
 | `DIGITAL_TWIN_API_URL` | `http://host.docker.internal:8002` | Digital Twin base URL |
 | `NUDGING_API_URL` | `http://host.docker.internal:8016` | nudging-tool base URL |
 | `DATABASE_ECHO` | `false` | Log SQL statements |
-| `CELINE_OIDC_CLIENT_SECRET` | `svc-grid` | OIDC client secret |
+| `CELINE_OIDC_CLIENT_SECRET` | `svc-grid` (dev only) | OIDC client secret — must differ from the client id outside dev |
 | `CELINE_OIDC_BASE_URL` | (from sdk default) | OIDC issuer base URL |
 | `CELINE_OIDC_CLIENT_ID` | `svc-grid` | OIDC client ID |
 | `DT_CLIENT_SCOPE` | — | OAuth2 scope for outbound DT calls |
@@ -104,8 +124,9 @@ task test -- tests/unit/test_policy.py
 
 No PostgreSQL, no Digital Twin, no nudging-tool, no MQTT broker and no network. The
 database is real SQLAlchemy on SQLite, and `policies/grid.rego` is evaluated for real —
-the suite refuses to start if the bundle does not load, because the policy fails open and
-an unloaded bundle would make every authorisation test pass for the wrong reason.
+the suite refuses to start if the bundle does not load, because the suite pins
+`CELINE_ENV=dev`, where the policy fails open, and an unloaded bundle would make every
+authorisation test pass for the wrong reason.
 
 - What the service must do, as numbered requirements: `docs/specifications/`
 - Why the suite is shaped this way: `docs/decisions/`

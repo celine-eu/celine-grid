@@ -1,8 +1,8 @@
 """The authorisation rules, evaluated against the real `policies/grid.rego`.
 
-These are the tests the suite exists for. `GridAccessPolicy` returns
-`Decision(True, ...)` whenever the engine is missing or the evaluation raises, so an
-*allow* proves nothing on its own — a denial is the only observation that distinguishes
+These are the tests the suite exists for. Under `CELINE_ENV=dev` — which the suite
+pins — `GridAccessPolicy` returns `Decision(True, ...)` whenever the engine is missing
+or the evaluation raises, so an *allow* proves nothing on its own — a denial is the only observation that distinguishes
 a policy that ran from one that was never consulted. The session-wide
 `policy_engine_is_loaded` fixture in `conftest.py` refuses to run the suite otherwise.
 
@@ -285,18 +285,63 @@ async def test_an_action_the_policy_does_not_name_is_denied(policy):
     assert decision.reason == "access denied"
 
 
+def _raise(*_args, **_kwargs):
+    raise RuntimeError("regorus exploded")
+
+
+def _unloaded() -> GridAccessPolicy:
+    unloaded = GridAccessPolicy.__new__(GridAccessPolicy)
+    unloaded._engine = None
+    return unloaded
+
+
+# Unset, empty and anything that is not exactly `dev` — `development` included.
+HARDENED = pytest.mark.parametrize("env", [None, "", "staging", "prod", "development"])
+
+
+def _set_env(monkeypatch, env: str | None) -> None:
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    if env is None:
+        monkeypatch.delenv("CELINE_ENV", raising=False)
+    else:
+        monkeypatch.setenv("CELINE_ENV", env)
+
+
 # @verifies REQ-0013
-async def test_an_evaluation_that_raises_is_allowed(policy, monkeypatch):
-    """
-    The fail-open branch, asserted so it is a decision on the record rather than a
-    surprise. `Decision(True, "policy-error-permissive")` is the marker to grep for in
-    production logs; a deployment that cannot tolerate it must assert on the reason.
-    """
+@HARDENED
+async def test_outside_dev_an_evaluation_that_raises_is_denied(policy, monkeypatch, env):
+    """Fail closed: a decision that could not be computed is a denial."""
+    _set_env(monkeypatch, env)
+    monkeypatch.setattr(policy._engine, "evaluate_decision", _raise)
 
-    def _boom(*_args, **_kwargs):
-        raise RuntimeError("regorus exploded")
+    decision = await policy.allow_network_read(make_user(sub="a", orgs={}), NETWORK)
 
-    monkeypatch.setattr(policy._engine, "evaluate_decision", _boom)
+    assert not decision.allowed
+    assert decision.reason == "policy-error"
+
+
+# @verifies REQ-0013
+@HARDENED
+async def test_outside_dev_a_policy_with_no_engine_denies_everything(monkeypatch, env):
+    _set_env(monkeypatch, env)
+
+    decision = await _unloaded().allow_alerts_read(
+        make_user(sub="alice", orgs={NETWORK: "dso"})
+    )
+
+    assert not decision.allowed
+    assert decision.reason == "no-policy-engine"
+
+
+# @verifies REQ-0013
+async def test_in_dev_an_evaluation_that_raises_is_allowed(policy, monkeypatch):
+    """
+    The dev-only fail-open branch, asserted so it is a decision on the record rather
+    than a surprise. `Decision(True, "policy-error-permissive")` is reachable only with
+    `CELINE_ENV=dev`.
+    """
+    monkeypatch.setenv("CELINE_ENV", "dev")
+    monkeypatch.setattr(policy._engine, "evaluate_decision", _raise)
 
     decision = await policy.allow_network_read(make_user(sub="a", orgs={}), NETWORK)
 
@@ -305,16 +350,15 @@ async def test_an_evaluation_that_raises_is_allowed(policy, monkeypatch):
 
 
 # @verifies REQ-0013
-async def test_a_policy_with_no_engine_allows_everything(policy_engine_is_loaded):
+async def test_in_dev_a_policy_with_no_engine_allows_everything(monkeypatch):
     """
-    The other fail-open branch, and the reason `conftest.py` refuses to run without a
-    loaded bundle: with `_engine is None` every check in this file would pass while
-    proving the opposite of what it claims.
+    The other dev-only fail-open branch, and the reason `conftest.py` refuses to run
+    without a loaded bundle: the suite pins `CELINE_ENV=dev`, so with `_engine is None`
+    every check in this file would pass while proving the opposite of what it claims.
     """
-    unloaded = GridAccessPolicy.__new__(GridAccessPolicy)
-    unloaded._engine = None
+    monkeypatch.setenv("CELINE_ENV", "dev")
 
-    decision = await unloaded.allow_network_read(
+    decision = await _unloaded().allow_network_read(
         make_user(sub="alice", orgs={"anything": "dso"}), "someone-elses-network"
     )
 

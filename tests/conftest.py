@@ -6,9 +6,10 @@ all five are faked here at the narrowest boundary that still exercises our code.
 
 OPA is the exception, and it is on purpose. `celine.sdk.policies` evaluates Rego
 **in process** via `regorus` — no server, no socket — so the real `policies/grid.rego`
-is what the suite evaluates. Faking it would be worse than useless: `GridAccessPolicy`
-falls back to `allow=True` when the bundle will not load, so a suite that faked the
-engine and a suite whose engine silently failed to load would produce identical passes.
+is what the suite evaluates. Faking it would be worse than useless: under
+`CELINE_ENV=dev`, which the suite pins, `GridAccessPolicy` falls back to `allow=True`
+when the bundle will not load, so a suite that faked the engine and a suite whose
+engine silently failed to load would produce identical passes.
 See ADR-0002 and `.agents/knowledge/the-policy-engine-fails-open.md`.
 
 The environment is set *before* `celine.grid` is imported anywhere. `settings.py` builds
@@ -26,6 +27,13 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Must run before the first `celine.grid` import. Do not move below them.
 # ---------------------------------------------------------------------------
+
+# Only `CELINE_ENV=dev` relaxes the posture (`celine.sdk.posture`); unset is hardened.
+# The suite runs against dev defaults — a `test:test` DSN, the default client secret —
+# and asserts the dev-only permissive fallbacks, so it pins dev rather than inheriting
+# whatever the shell has. Tests of the hardened posture monkeypatch it per test
+# (`tests/unit/test_posture.py`); the policy reads it per decision, the guard per call.
+os.environ["CELINE_ENV"] = "dev"
 
 # Parsed by SQLAlchemy at import to build both engines; never connected to, because
 # every test that needs a database gets the SQLite session from the `db` fixture.

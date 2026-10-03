@@ -1,6 +1,6 @@
 # Operability
 
-Running, degrading, and the one thing that is currently wrong.
+Running, degrading, refusing to start, and the one thing that is currently wrong.
 
 ---
 
@@ -18,6 +18,29 @@ asks whether its token is still good.
 
 The public set is matched by exact path, so `/api/docs/oauth2-redirect` is **not** public
 and Swagger UI's interactive OAuth2 flow cannot complete here.
+
+### REQ-0050 — outside development, the dev defaults refuse startup
+
+`settings.py` ships zero-config development defaults on purpose: the local stack's
+database password, `CELINE_OIDC_CLIENT_SECRET` equal to the client id (`svc-grid`), and the
+SDK's local Keycloak as issuer and JWKS. They are safe only because the lifespan refuses
+them, **first** — before `init_db()` and before the MQTT broker is created — unless the
+environment is development.
+
+The signal is `celine.sdk.posture`'s: `CELINE_ENV`, then `ENVIRONMENT`; **only `dev`
+relaxes**. Unset, empty, `staging`, `prod` or a typo is hardened. `task run` exports
+`CELINE_ENV=dev`; `CELINE_ENV=staging task run` is the prod-like local mode.
+
+Outside dev, startup raises `InsecureConfiguration` naming every violation at once:
+
+- `DATABASE_URL` carries a development password (`securepassword123`, `postgres`, or a
+  trivially weak one);
+- `CELINE_OIDC_CLIENT_SECRET` is empty or equal to the client id;
+- `CELINE_OIDC_BASE_URL` / `CELINE_OIDC_JWKS_URI` were not set, so the SDK's local
+  default is in use;
+- the policy bundle did not load (`CELINE_POLICIES_POLICIES_DIR`) — REQ-0013.
+
+In dev the same values are logged as one warning and startup proceeds.
 
 ### REQ-0040 — an unavailable MQTT broker does not stop the service
 

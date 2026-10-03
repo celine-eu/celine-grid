@@ -59,3 +59,10 @@ where any of those three would leave the suite green and the service open.
 `regorus` is a compiled dependency of `celine-sdk`. If a future SDK release drops it or
 moves policy evaluation to an out-of-process OPA server, this decision needs revisiting
 and the session fixture will say so loudly on the first run.
+
+## Update — 2026-10-03
+
+Both fallbacks are now **development-only** (NIS2 finding R23): outside `CELINE_ENV=dev`
+a missing bundle refuses startup and a missing or raising engine denies (REQ-0013,
+REQ-0050). The reasoning above still holds for the suite, which pins `CELINE_ENV=dev` and
+therefore still runs with the permissive fallback in reach.

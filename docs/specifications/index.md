@@ -58,6 +58,7 @@ same change.
 | REQ-0047 | [the grid proxy](grid-proxy.md) — the tree-strike overlay (`/tree-strike-spans`) |
 | REQ-0048 | [the grid proxy](grid-proxy.md) — the intra-day risks (`/risks-8h`) |
 | REQ-0049 | [the grid proxy](grid-proxy.md) — `asset_type=joint` on `/shapes` |
+| REQ-0050 | [operability](operability.md) — outside `CELINE_ENV=dev` the dev defaults refuse startup |
 
 ## What is not here
 

@@ -19,12 +19,12 @@ tasks:
   run:
     desc: Run Grid BFF with hot-reload (development)
     cmds:
-      - .venv/bin/uvicorn {{.APP_MODULE}} --host {{.HOST}} --port {{.PORT}} --reload
+      - CELINE_ENV=${CELINE_ENV:-dev} .venv/bin/uvicorn {{.APP_MODULE}} --host {{.HOST}} --port {{.PORT}} --reload
 
   debug:
     desc: Run Grid BFF with hot-reload and debugpy attached
     cmds:
-      - DEBUG_ATTACH=nowait DEBUG_PORT=4{{.PORT}} .venv/bin/uvicorn {{.APP_MODULE}} --host {{.HOST}} --port {{.PORT}} --reload
+      - CELINE_ENV=${CELINE_ENV:-dev} DEBUG_ATTACH=nowait DEBUG_PORT=4{{.PORT}} .venv/bin/uvicorn {{.APP_MODULE}} --host {{.HOST}} --port {{.PORT}} --reload
 
   alembic:upgrade:
     desc: Run all pending database migrations

@@ -52,7 +52,7 @@ Rego is what runs; see the companion's knowledge, and
 The consequence worth stating here: **alert-rule confidentiality rests on the
 `WHERE user_id = :sub` in `src/celine/grid/api/alerts.py`, not on the policy.**
 
-The `GridAccessPolicy` class (`src/celine/grid/security/policy.py`) loads the Rego bundle once at import time and evaluates decisions per request — in process, via `regorus`, with no OPA server involved. When the policy engine is unavailable (e.g. a working directory from which the relative default `./policies` does not resolve), the policy falls back to permissive — `allow=True`.
+The `GridAccessPolicy` class (`src/celine/grid/security/policy.py`) loads the Rego bundle once at import time and evaluates decisions per request — in process, via `regorus`, with no OPA server involved. When the policy engine is unavailable (e.g. a working directory from which the relative default `./policies` does not resolve) or an evaluation raises, the decision is a **denial** — and a missing bundle refuses startup — unless `CELINE_ENV=dev`, where both degrade to `allow=True` with a warning (REQ-0013, REQ-0050).
 
 DSO network identity comes from the Keycloak organisation claim on the JWT. The first organisation with `type=dso` becomes the user's `network_id`; `resolve_dso_network()` raises HTTP 403 if no such organisation is present.
 
@@ -119,13 +119,13 @@ Migrations are managed by Alembic in the `alembic/` directory. The `docker-compo
 | Digital Twin API (`digital-twin`) | Grid risk data source | Yes (grid endpoints return 503 if unconfigured) |
 | nudging-tool | Alert delivery | Yes (dispatch silently degrades on send failures) |
 | MQTT broker | Pipeline completion events | No (startup warning; alert dispatch is inactive) |
-| OPA / `celine.sdk.policies` | Fine-grained access control | No (permissive fallback) |
+| OPA / `celine.sdk.policies` | Fine-grained access control | Yes outside `CELINE_ENV=dev` (startup refused, decisions deny); dev falls back to permissive |
 
 ## Key design decisions
 
 **DSO org alias as network_id** — the Keycloak organisation alias is used directly as the `network_id` for DT queries. No mapping table is needed; org management in Keycloak is the single source of truth. The same string is also the Prefect namespace the pipeline listener reads, so one unmapped identifier spans three systems.
 
-**Permissive OPA fallback** — the policy engine falls back to allow-all when unavailable so development environments without a running OPA instance stay functional. Production deployments always have the policies directory present in the container. The cost is that a permit and a bypass are indistinguishable from a response, which is why the test suite refuses to run without a loaded bundle.
+**Unset ⇒ hardened** — the service ships development defaults (database password, client secret equal to the client id, local Keycloak issuer) and a permissive OPA fallback so a laptop needs no configuration. They apply only when `CELINE_ENV=dev` (via `celine.sdk.posture`); anywhere else — including when the variable is unset — startup refuses the defaults and a missing or failing policy engine denies. Failing closed has a real operational cost (a bad bundle takes the service down rather than opening it), which is the trade NIS2 finding R23 chose. In dev a permit and a bypass remain indistinguishable from a response, which is why the test suite refuses to run without a loaded bundle.
 
 **Pipeline listener vs polling** — alert dispatch is event-driven (MQTT) rather than scheduled. This avoids unnecessary DT queries and ensures alerts fire promptly after each pipeline run without coupling the BFF to a scheduler.
 

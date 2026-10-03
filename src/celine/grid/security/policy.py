@@ -4,7 +4,10 @@ Uses celine.sdk.policies.PolicyEngine.evaluate_decision — the correct high-lev
 API that builds proper ``data.{package}.allow`` / ``data.{package}.reason``
 queries rather than evaluating the package path as a raw Rego expression.
 
-Falls back to permissive when the engine is unavailable (dev/test convenience).
+**Fails closed outside development.** A missing engine or an evaluation that raises
+is a denial unless ``CELINE_ENV=dev`` (``celine.sdk.posture``); a missing engine also
+refuses startup there (``security/posture.py``). Only in dev do both degrade to an
+allow with a warning, so a laptop without the bundle keeps working.
 """
 from __future__ import annotations
 
@@ -13,6 +16,7 @@ from dataclasses import dataclass
 
 from celine.sdk.auth import JwtUser
 from celine.sdk.auth.jwt import extract_groups
+from celine.sdk.posture import is_dev
 
 from celine.grid.settings import settings
 
@@ -82,8 +86,10 @@ class GridAccessPolicy:
     """Enforce OPA grid policies via celine.sdk.policies.PolicyEngine.
 
     Instantiated once at module import; decisions are evaluated per request.
-    Falls back to permissive (allow=True) when the policy engine is unavailable
-    so development environments without OPA continue to work.
+
+    When the engine is unavailable or an evaluation raises, the decision is a denial
+    unless ``CELINE_ENV=dev``, where it is an allow with a warning so development
+    without OPA keeps working. The posture is read per decision, not at import.
     """
 
     def __init__(self) -> None:
@@ -103,9 +109,18 @@ class GridAccessPolicy:
         except ImportError:
             logger.warning("celine.sdk.policies not available — running without OPA")
 
+    @property
+    def loaded(self) -> bool:
+        """True when a Rego bundle is loaded and decisions are real."""
+        return self._engine is not None
+
     async def _evaluate(self, user: JwtUser, action: str, attributes: dict) -> Decision:
         if self._engine is None:
-            return Decision(True, "no-policy-engine")
+            if is_dev():
+                logger.warning("No policy engine — allowing %r (CELINE_ENV=dev)", action)
+                return Decision(True, "no-policy-engine")
+            logger.error("No policy engine — denying %r (fail closed)", action)
+            return Decision(False, "no-policy-engine")
         try:
             policy_input = _make_policy_input(user, action, attributes)
             result = self._engine.evaluate_decision(_PACKAGE, policy_input)
@@ -122,8 +137,11 @@ class GridAccessPolicy:
                 )
             return decision
         except Exception as exc:
-            logger.warning("OPA evaluation error: %s", exc)
-            return Decision(True, "policy-error-permissive")
+            if is_dev():
+                logger.warning("OPA evaluation error, allowing (CELINE_ENV=dev): %s", exc)
+                return Decision(True, "policy-error-permissive")
+            logger.error("OPA evaluation error, denying (fail closed): %s", exc)
+            return Decision(False, "policy-error")
 
     async def allow_network_read(self, user: JwtUser, network_id: str) -> Decision:
         """Check if *user* may read DT data for *network_id*.

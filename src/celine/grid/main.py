@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from celine.grid.db import init_db
 from celine.grid.routes import create_api_router
 from celine.grid.security.middleware import PolicyMiddleware
+from celine.grid.security.posture import enforce_posture
 from celine.grid.services.pipeline_listener import create_broker, on_pipeline_run
 from celine.grid.settings import settings
 
@@ -18,6 +19,10 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # First, before any side effect: outside CELINE_ENV=dev the dev defaults and a
+    # missing policy bundle refuse startup (InsecureConfiguration).
+    enforce_posture()
+
     await init_db()
 
     broker = create_broker()

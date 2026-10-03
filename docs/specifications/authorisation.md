@@ -70,18 +70,22 @@ The `alerts.*` rules are all gated on the subject not being a service, so the on
 service can satisfy is the blanket `grid.admin` one. `grid.read` — enough to read every
 network's risk data — is not enough to read one operator's rules.
 
-### REQ-0013 — the policy denies by default, and the engine allows by default
+### REQ-0013 — the policy denies by default, and the engine fails closed outside dev
 
 `default allow := false`: an action the policy does not name is refused, so a route that
 grows a new action and no rule for it fails closed.
 
-`GridAccessPolicy` inverts this in two cases, both deliberate:
+When no decision can be computed, `GridAccessPolicy` also fails closed — unless the
+environment says development (`CELINE_ENV=dev`, see REQ-0050):
 
-- the Rego bundle did not load — `Decision(True, "no-policy-engine")`
-- the evaluation raised — `Decision(True, "policy-error-permissive")`
+| | outside dev (unset included) | `CELINE_ENV=dev` |
+|---|---|---|
+| the Rego bundle did not load | `Decision(False, "no-policy-engine")`, and startup is refused (REQ-0050) | `Decision(True, "no-policy-engine")` + warning |
+| the evaluation raised | `Decision(False, "policy-error")` | `Decision(True, "policy-error-permissive")` + warning |
 
-Both are development conveniences and both are indistinguishable, from a response alone,
-from a policy that ran and permitted. The reason string is the only signal, and it is
-what a deployment intolerant of fail-open must alert on. The test suite refuses to run at
+The two dev allows are development conveniences, indistinguishable from a response alone
+from a policy that ran and permitted. They used to apply everywhere; since NIS2 finding
+R23 they are reachable only when development is stated explicitly. The posture is read
+per decision, not at import. The test suite pins `CELINE_ENV=dev` and refuses to run at
 all unless the bundle loaded, because otherwise every assertion in this file would pass
 for the wrong reason.

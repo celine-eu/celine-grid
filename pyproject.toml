@@ -13,6 +13,8 @@ dependencies = [
   "psycopg2-binary>=2.9.12",
   "alembic>=1.13.0",
   "sqlalchemy-utils>=0.42.1",
+  # TODO(posture): celine.sdk.posture (security/posture.py, security/policy.py) is not in
+  # a released celine-sdk yet. Raise this floor to the first release that ships it.
   "celine-sdk>=1.20.0",
 ]
 
