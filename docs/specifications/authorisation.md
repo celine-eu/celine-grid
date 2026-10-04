@@ -89,3 +89,22 @@ R23 they are reachable only when development is stated explicitly. The posture i
 per decision, not at import. The test suite pins `CELINE_ENV=dev` and refuses to run at
 all unless the bundle loaded, because otherwise every assertion in this file would pass
 for the wrong reason.
+
+### REQ-0051 — there is no platform-wide grant, and an organisation's groups reach the policy only for the organisation the request concerns
+
+This service has no platform level. Nothing in a token outside the caller's
+organisations widens what the caller may do: the realm role `platform-admin` grants
+nothing here, and neither does a realm group (`/admins`, `admins`, …) or a realm role
+that a token from an older realm may still carry. None of them enters the policy input.
+A platform administrator reads a network only as a member of that DSO organisation, like
+any other operator.
+
+`input.subject.groups` holds the caller's groups in **one** organisation: the one the
+request names in `network_id`, or, for an action that names none, the caller's own DSO
+organisation. Groups held in any other organisation never appear, and the list is never
+a merge of the realm's groups with an organisation's, or of two organisations'. A
+service account's list is empty.
+
+`grid.rego` reads no groups today (REQ-0006 – REQ-0012). This requirement is what keeps a
+future rule that does from reading one organisation's `admins` as another's, or as the
+platform's.

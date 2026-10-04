@@ -25,6 +25,7 @@ def make_user(
     scope: str | None = None,
     preferred_username: str | None = None,
     org_attributes: dict[str, dict[str, list[str]]] | None = None,
+    org_groups: dict[str, list[str]] | None = None,
     **claims: Any,
 ) -> JwtUser:
     """Build a `JwtUser` the way `JwtUser.from_token` would from these claims.
@@ -37,6 +38,10 @@ def make_user(
 
     `org_attributes` puts values in the nested `attributes` map instead, which is the
     other shape KC 26's org mapper emits.
+
+    `org_groups` puts an organisation's own groups in its `groups` list, with the leading
+    slash Keycloak writes (`["/admins"]`). Realm-level claims (`groups`, `realm_access`)
+    go in through `**claims`, exactly as a token carries them.
     """
     org_claim: dict[str, dict[str, Any]] = {}
     for alias, org_type in (orgs or {}).items():
@@ -45,6 +50,8 @@ def make_user(
             data["type"] = [org_type]
         if org_attributes and alias in org_attributes:
             data["attributes"] = org_attributes[alias]
+        if org_groups and alias in org_groups:
+            data["groups"] = list(org_groups[alias])
         org_claim[alias] = data
 
     payload: dict[str, Any] = {"sub": sub, "organization": org_claim, **claims}

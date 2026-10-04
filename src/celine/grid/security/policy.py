@@ -14,8 +14,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from celine.sdk.auth import JwtUser
-from celine.sdk.auth.jwt import extract_groups
+from celine.sdk.auth import JwtUser, organization_groups
 from celine.sdk.posture import is_dev
 
 from celine.grid.settings import settings
@@ -58,7 +57,18 @@ def _make_policy_input(user: JwtUser, action: str, attributes: dict):
     else:
         subject_type = SubjectType.USER
 
-    groups = extract_groups(user.claims)
+    network_id = None if subject_type == SubjectType.SERVICE else _dso_network(user)
+
+    # REQ-0051: groups count only inside the organisation the request concerns — the
+    # network it names, else the caller's own DSO. Never realm groups, never another
+    # organisation's, never a merge of the two levels. Realm roles (`platform-admin`
+    # included) are deliberately absent: this service has no platform-wide grant.
+    concerned = attributes.get("network_id") or network_id
+    groups = (
+        organization_groups(user.claims, concerned)
+        if concerned and subject_type != SubjectType.SERVICE
+        else []
+    )
 
     return PolicyInput(
         subject=Subject(
@@ -67,9 +77,7 @@ def _make_policy_input(user: JwtUser, action: str, attributes: dict):
             groups=groups,
             scopes=scopes,
             # Pass grid-specific extras in claims so rego can access them
-            claims={
-                "network_id": None if subject_type == SubjectType.SERVICE else _dso_network(user),
-            },
+            claims={"network_id": network_id},
         ),
         resource=Resource(
             # ResourceType.USERDATA used as a generic stand-in — grid.rego does not

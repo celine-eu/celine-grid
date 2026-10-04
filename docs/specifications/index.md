@@ -59,6 +59,7 @@ same change.
 | REQ-0048 | [the grid proxy](grid-proxy.md) — the intra-day risks (`/risks-8h`) |
 | REQ-0049 | [the grid proxy](grid-proxy.md) — `asset_type=joint` on `/shapes` |
 | REQ-0050 | [operability](operability.md) — outside `CELINE_ENV=dev` the dev defaults refuse startup |
+| REQ-0051 | [authorisation](authorisation.md) — no platform-wide grant; organisation groups only for the organisation concerned |
 
 ## What is not here
 

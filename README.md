@@ -128,6 +128,15 @@ the suite refuses to start if the bundle does not load, because the suite pins
 `CELINE_ENV=dev`, where the policy fails open, and an unloaded bundle would make every
 authorisation test pass for the wrong reason.
 
+One opt-in layer does reach a service: `tests/integration/` mints real tokens from a
+**local** Keycloak and sends them through the real token check and policy. It is skipped
+unless `CELINE_GRID_IT_KEYCLOAK` names the realm issuer; its docstring lists the users and
+variables it expects.
+
+```bash
+CELINE_GRID_IT_KEYCLOAK=http://keycloak.celine.localhost/realms/celine task test -- tests/integration
+```
+
 - What the service must do, as numbered requirements: `docs/specifications/`
 - Why the suite is shaped this way: `docs/decisions/`
 - How to test a change, and what `task test` cannot see: `.agents/playbooks/testing.md`

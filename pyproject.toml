@@ -13,8 +13,10 @@ dependencies = [
   "psycopg2-binary>=2.9.12",
   "alembic>=1.13.0",
   "sqlalchemy-utils>=0.42.1",
-  # TODO(posture): celine.sdk.posture (security/posture.py, security/policy.py) is not in
-  # a released celine-sdk yet. Raise this floor to the first release that ships it.
+  # TODO(posture, two-level grants): celine.sdk.posture (security/posture.py,
+  # security/policy.py) and the two-level grant model (JwtUser.is_platform_admin in the
+  # tests; extract_groups removed) are not in a released celine-sdk yet. Raise this floor
+  # to >=2.0.0, the first release that ships both, and re-lock.
   "celine-sdk>=1.20.0",
 ]
 
