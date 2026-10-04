@@ -15,8 +15,11 @@ class Settings(BaseSettings):
     )
 
     oidc: OidcSettings = OidcSettings(
-        audience="svc-grid",
-        client_id="svc-grid",
+        # From the environment when set; the local realm's identity otherwise.
+        # Literal constructor arguments would override CELINE_OIDC_* and leave the
+        # client unconfigurable per deployment.
+        audience=os.getenv("CELINE_OIDC_AUDIENCE", "svc-grid"),
+        client_id=os.getenv("CELINE_OIDC_CLIENT_ID", "svc-grid"),
         client_secret=os.getenv("CELINE_OIDC_CLIENT_SECRET", "svc-grid"),
     )
 
