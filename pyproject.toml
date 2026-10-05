@@ -17,6 +17,7 @@ dependencies = [
   # security/policy.py) and the two-level grant model (JwtUser.is_platform_admin in the
   # tests; extract_groups removed) are not in a released celine-sdk yet. Raise this floor
   # to >=2.0.0, the first release that ships both, and re-lock.
+  # TODO: raise to the celine-sdk release that ships `celine.sdk.posture.docs_urls`.
   "celine-sdk>=1.20.0",
 ]
 

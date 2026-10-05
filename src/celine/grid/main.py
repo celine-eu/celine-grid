@@ -4,6 +4,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
+from celine.sdk.posture import docs_urls
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -59,9 +60,12 @@ def create_app() -> FastAPI:
         description="Backend-for-frontend for the Grid Resilience UI",
         version="0.1.0",
         lifespan=lifespan,
-        openapi_url="/api/openapi.json",
-        docs_url="/api/docs",
-        redoc_url="/api/redoc",
+        # Outside CELINE_ENV=dev none of the three is mounted unless CELINE_PUBLIC_DOCS=true.
+        **docs_urls(
+            docs_url="/api/docs",
+            redoc_url="/api/redoc",
+            openapi_url="/api/openapi.json",
+        ),
     )
 
     app.add_middleware(

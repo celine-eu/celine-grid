@@ -9,9 +9,8 @@ Running, degrading, refusing to start, and the one thing that is currently wrong
 `GET /health` answers `{"status": "ok"}` with no authentication, because a liveness probe
 reaches the container before any proxy has attached anything to it.
 
-`/api/docs`, `/api/redoc` and `/api/openapi.json` are also public. That publishes the full
-route table to anyone who can reach the service — acceptable behind the cluster's ingress,
-and a deliberate cost of keeping the schema available to the frontend.
+`/api/docs`, `/api/redoc` and `/api/openapi.json` are also public, but mounted only in
+`CELINE_ENV=dev` (or with `CELINE_PUBLIC_DOCS=true`); anywhere else they answer `404`.
 
 `/api/ping` requires only a decodable token: no organisation, no scope. It is how a client
 asks whether its token is still good.
