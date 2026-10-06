@@ -105,6 +105,16 @@ reason := "missing DSO organization membership" if {
     not is_service
     input.action.name == "alerts.write"
     input.subject.claims.network_id == null
+    object.get(input.subject.claims, "dso_count", 0) < 2
+}
+
+# REQ-0052: several DSO organisations and no network named — never the first one.
+reason := "ambiguous DSO organization membership: name the network" if {
+    not allow
+    not is_service
+    input.action.name == "alerts.write"
+    input.subject.claims.network_id == null
+    object.get(input.subject.claims, "dso_count", 0) >= 2
 }
 
 reason := "service missing grid.read scope" if {

@@ -193,17 +193,18 @@ def test_no_dso_membership_is_a_403():
     assert exc.value.detail == "DSO organisation membership required"
 
 
-# @verifies REQ-0004
-def test_which_of_several_dso_organisations_wins_is_claim_order():
+# @verifies REQ-0052
+def test_several_dso_organisations_are_refused_not_picked_from():
     """
-    A caller belonging to two DSOs gets the first one in the `organization` claim, and
-    nothing anywhere states which that is. Pinned as observed rather than asserted as
-    correct: if multi-DSO membership ever becomes real, this test is where the
-    ambiguity surfaces. See `.agents/knowledge/one-operator-one-network.md`.
+    A caller belonging to two DSOs used to get the first one in the `organization`
+    claim, and nothing anywhere stated which that was. An action naming no network now
+    refuses instead.
     """
     user = make_user(sub="alice", orgs={"first-dso": "dso", "second-dso": "dso"})
 
-    assert resolve_dso_network(user) == "first-dso"
+    with pytest.raises(HTTPException) as exc:
+        resolve_dso_network(user)
+    assert exc.value.status_code == 403
 
 
 # ---------------------------------------------------------------------------

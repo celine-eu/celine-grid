@@ -108,3 +108,15 @@ service account's list is empty.
 `grid.rego` reads no groups today (REQ-0006 – REQ-0012). This requirement is what keeps a
 future rule that does from reading one organisation's `admins` as another's, or as the
 platform's.
+
+### REQ-0052 — a caller in several DSO organisations is never given the first one
+
+A request that names a network (`/api/grid/{network_id}/…`) is judged for that network:
+the caller passes when it is one of their DSO organisations, whichever position it has in
+the token. An action that names no network — `/api/me`, creating an alert rule — needs
+exactly one DSO organisation: with several it is refused (`403`; the policy's reason is
+`ambiguous DSO organization membership: name the network`), never resolved to whichever
+the token lists first. With none it is refused as before (REQ-0005, REQ-0011).
+
+The policy input carries `claims.network_id` (the network as resolved above, or `null`)
+and `claims.dso_count`.

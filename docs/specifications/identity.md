@@ -44,7 +44,8 @@ provider is down". That is a deliberate simplification and worth knowing before 
 
 ### REQ-0004 — the DSO organisation's alias is the network identity
 
-The caller's first Keycloak organisation of `type=dso` supplies its alias, and that alias
+The caller's Keycloak organisation of `type=dso` supplies its alias (a caller in several
+is REQ-0052), and that alias
 **is** the `network_id` used to query the Digital Twin, to stamp new alert rules, and to
 authorise every grid request. There is no mapping table.
 

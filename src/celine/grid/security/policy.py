@@ -32,10 +32,27 @@ class Decision:
     reason: str | None = None
 
 
-def _dso_network(user: JwtUser) -> str | None:
-    for org in user.organizations:
-        if org.type == DSO_TYPE or org.has_attribute("type", DSO_TYPE):
-            return org.alias
+def dso_networks(user: JwtUser) -> list[str]:
+    """The aliases of the caller's DSO organisations, sorted."""
+    return sorted(
+        org.alias
+        for org in user.organizations
+        if org.type == DSO_TYPE or org.has_attribute("type", DSO_TYPE)
+    )
+
+
+def _dso_network(user: JwtUser, requested: str | None = None) -> str | None:
+    """The DSO network the request is about, from the caller's side (REQ-0052).
+
+    The network the request names, when the caller is in it; else the caller's one
+    DSO. ``None`` when the caller has no DSO, or has several and the request names
+    none of them: two networks are never reduced to the first one found.
+    """
+    networks = dso_networks(user)
+    if requested is not None and requested in networks:
+        return requested
+    if len(networks) == 1:
+        return networks[0]
     return None
 
 
@@ -57,7 +74,11 @@ def _make_policy_input(user: JwtUser, action: str, attributes: dict):
     else:
         subject_type = SubjectType.USER
 
-    network_id = None if subject_type == SubjectType.SERVICE else _dso_network(user)
+    network_id = (
+        None
+        if subject_type == SubjectType.SERVICE
+        else _dso_network(user, attributes.get("network_id"))
+    )
 
     # REQ-0051: groups count only inside the organisation the request concerns — the
     # network it names, else the caller's own DSO. Never realm groups, never another
@@ -77,7 +98,7 @@ def _make_policy_input(user: JwtUser, action: str, attributes: dict):
             groups=groups,
             scopes=scopes,
             # Pass grid-specific extras in claims so rego can access them
-            claims={"network_id": network_id},
+            claims={"network_id": network_id, "dso_count": len(dso_networks(user))},
         ),
         resource=Resource(
             # ResourceType.USERDATA used as a generic stand-in — grid.rego does not

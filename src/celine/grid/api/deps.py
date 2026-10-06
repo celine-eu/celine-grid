@@ -9,13 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from celine.grid.db import get_db
 from celine.grid.settings import settings
-from celine.grid.security.policy import policy
+from celine.grid.security.policy import dso_networks, policy
 from celine.sdk.auth import JwtUser, OidcClientCredentialsProvider
 from celine.sdk.dt import DTClient
 
 logger = logging.getLogger(__name__)
 
-DSO_TYPE = "dso"
 
 
 # ---------------------------------------------------------------------------
@@ -87,15 +86,22 @@ def resolve_dso_network(user: JwtUser) -> str:
     """Return the network_id for the user's DSO organisation.
 
     The Keycloak org alias is used directly as the network_id — no mapping
-    table needed.  Raises HTTP 403 if the user has no DSO organisation.
+    table needed. Raises HTTP 403 if the user has no DSO organisation, and if
+    the user has several (REQ-0052): an action naming no network is never given
+    the first one found.
 
     KC 26 org mapper may emit type either at the top-level org dict or inside
     the attributes map; both locations are checked.
     """
-    for org in user.organizations:
-        if org.type == DSO_TYPE or org.has_attribute("type", DSO_TYPE):
-            return org.alias
-    raise HTTPException(status_code=403, detail="DSO organisation membership required")
+    networks = dso_networks(user)
+    if len(networks) > 1:
+        raise HTTPException(
+            status_code=403,
+            detail="Member of several DSO organisations: the request must name the network",
+        )
+    if not networks:
+        raise HTTPException(status_code=403, detail="DSO organisation membership required")
+    return networks[0]
 
 
 # ---------------------------------------------------------------------------
