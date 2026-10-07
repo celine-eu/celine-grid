@@ -62,11 +62,9 @@ All grid endpoints live under `/api/grid/{network_id}/`. The `network_id` path p
 
 Available data surfaces:
 
-- **Wind** — `wind/map`, `wind/bosco`, `wind/alert-distribution`, `wind/trend`
-- **Heat** — `heat/map`, `heat/alert-distribution`, `heat/trend`
 - **Substations** — `substations/map`
 - **Metadata** — `filters`, `summary`
-- **CIM topology** — `tile-index`, `shapes`, `risks`, `risks-now`, `trendline`
+- **CIM topology** — `tile-index`, `shapes`, `tree-strike-spans`, `risks`, `risks-now`, `risks-8h`, `risk-km`, `trendline`
 
 The CIM topology endpoints use ValueFetcherSpec-backed queries. `tile-index` returns the tile catalog for progressive loading. `shapes` assembles CIM asset topology as a GeoJSON FeatureCollection, parsing per-row `feature_geojson` and building Feature objects (a lightweight presentation transformation). `risks` returns date-filtered risk rows per vector. `risks-now` returns current nowcasting observations without date filtering. `trendline` returns daily risk percentage over a `date_from`/`date_to` range.
 
@@ -91,7 +89,7 @@ Rule ownership is enforced at the SQL query level (`WHERE user_id = :sub`), not 
 
 The dispatcher (`src/celine/grid/services/alert_dispatcher.py`):
 
-1. Fetches current `wind_alert_distribution` and `heat_alert_distribution` from the DT for the event's `namespace` (= `network_id`).
+1. Fetches the `risk_km` tratta rows for the event's dates from the DT for the event's `namespace` (= `network_id`).
 2. Loads all active `AlertRule` rows for that `network_id`.
 3. For each rule, checks whether the distribution contains events at or above the rule's threshold (`WARNING` floor = `{WARNING, ALERT}`; `ALERT` floor = `{ALERT}`).
 4. For each triggered rule, emits an **`extr_event`** `DigitalTwinEvent` to the nudging-tool via `NudgingAdminClient`, carrying the pipeline's `period`, `window_start` and `window_end` in its facts. The hazard reported is `wind`, `heat`, or `thunderstorm` when a rule watching both triggers on both.

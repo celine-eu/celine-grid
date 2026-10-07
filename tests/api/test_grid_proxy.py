@@ -20,13 +20,6 @@ from tests.fakes import FetchResult
 
 # Every route under /api/grid/{network_id}, and the DT call each one makes.
 ROUTES = [
-    ("/wind/map", "wind_map"),
-    ("/wind/bosco", "wind_bosco"),
-    ("/wind/alert-distribution", "wind_alert_distribution"),
-    ("/wind/trend", "wind_trend"),
-    ("/heat/map", "heat_map"),
-    ("/heat/alert-distribution", "heat_alert_distribution"),
-    ("/heat/trend", "heat_trend"),
     ("/substations/map", "substations_map"),
     ("/filters", "filters"),
     ("/summary", "summary"),
@@ -116,16 +109,13 @@ async def test_repeated_filter_parameters_are_forwarded_as_lists(client, dso_use
     took only the last value would silently narrow every filtered view to one day.
     """
     await client.get(
-        url("/wind/map")
-        + "?dates=2026-08-14&dates=2026-08-15"
-        + "&operational_unit=north&line_name=L1&substation_name=S1&risk_level=ALERT",
+        url("/risks") + "?dates=2026-08-14&dates=2026-08-15&risk_vector=wind&risk_vector=heat",
         headers=dso_user,
     )
 
-    kwargs = dt.grid.call_kwargs("wind_map")
+    kwargs = dt.grid.call_kwargs("risks")
     assert kwargs["dates"] == ["2026-08-14", "2026-08-15"]
-    assert kwargs["operational_unit"] == ["north"]
-    assert kwargs["risk_level"] == ["ALERT"]
+    assert kwargs["risk_vector"] == ["wind", "heat"]
 
 
 # @verifies REQ-0024
@@ -136,9 +126,9 @@ async def test_an_absent_filter_is_forwarded_as_none_not_an_empty_list(
     The SDK maps `None` to `UNSET` and omits the parameter; an empty list would be sent
     as `?dates=` and could be read upstream as "match nothing".
     """
-    await client.get(url("/wind/map"), headers=dso_user)
+    await client.get(url("/risks-now"), headers=dso_user)
 
-    assert dt.grid.call_kwargs("wind_map")["dates"] is None
+    assert dt.grid.call_kwargs("risks_now")["risk_vector"] is None
 
 
 # @verifies REQ-0024
@@ -229,7 +219,7 @@ async def test_the_static_topology_is_cacheable_for_an_hour(client, dso_user, pa
 
 @pytest.mark.parametrize(
     "path",
-    ["/risks", "/risks-now", "/summary", "/wind/map", "/risk-km?dates=2026-09-11", "/risks-8h?dates=2026-09-11"]
+    ["/risks", "/risks-now", "/summary", "/risk-km?dates=2026-09-11", "/risks-8h?dates=2026-09-11"]
 )
 # @verifies REQ-0028
 async def test_the_risk_surfaces_are_not_cached(client, dso_user, path):
@@ -578,3 +568,29 @@ async def test_a_joint_row_becomes_a_point_feature_with_thermal_properties(
         "technology": "RESINA",
         "m_r_critico": 2.5,
     }
+
+
+# ---------------------------------------------------------------------------
+# The legacy wind and heat routes are gone
+# ---------------------------------------------------------------------------
+
+LEGACY = [
+    "/wind/map", "/wind/bosco", "/wind/alert-distribution", "/wind/trend",
+    "/heat/map", "/heat/alert-distribution", "/heat/trend",
+]
+
+
+@pytest.mark.parametrize("path", LEGACY)
+# @verifies REQ-0053
+async def test_a_legacy_wind_or_heat_route_is_not_found(client, dso_user, dt, path):
+    response = await client.get(url(path), headers=dso_user)
+
+    assert response.status_code == 404
+    assert dt.grid.calls == []
+
+
+# @verifies REQ-0053
+def test_the_openapi_document_names_no_legacy_route(app):
+    paths = app.openapi()["paths"]
+
+    assert not [p for p in paths if "/wind/" in p or "/heat/" in p]

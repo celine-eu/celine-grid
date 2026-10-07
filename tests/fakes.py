@@ -175,13 +175,6 @@ class FakeGridClient:
     """
 
     _DEFAULTS: dict[str, Any] = {
-        "wind_map": {"type": "FeatureCollection", "features": []},
-        "wind_bosco": {"items": []},
-        "wind_alert_distribution": [],
-        "wind_trend": [],
-        "heat_map": {"type": "FeatureCollection", "features": []},
-        "heat_alert_distribution": [],
-        "heat_trend": [],
         "substations_map": {"items": []},
         "filters": {"operational_unit": [], "line_name": []},
         "summary": {"lines": 0},

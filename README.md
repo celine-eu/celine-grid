@@ -6,7 +6,7 @@ It acts as the secure API gateway between the grid dashboard and the CELINE plat
 
 ## Features
 
-- **Grid risk data proxy** — forwards wind and heat resilience data (maps, alert distributions, trends, substation layouts, filter metadata, summary) from the Digital Twin to the frontend, scoped to the operator's DSO network
+- **Grid risk data proxy** — forwards wind and heat resilience data (risk rows, nowcast, 8-hour windows, km exposure, trendline, substation layouts, filter metadata, summary) from the Digital Twin to the frontend, scoped to the operator's DSO network
 - **Alert rules** — per-user CRUD for wind/heat risk alert rules, each carrying a threshold (`WARNING` or `ALERT`) and optional recipient override
 - **Notification settings** — per-user email recipients and webhook URL for alert delivery
 - **Automated alert dispatch** — listens on MQTT for `grid-resilience-flow` pipeline completions, evaluates active alert rules against live DT distributions, and sends nudging events via the nudging-tool
@@ -19,8 +19,6 @@ The service runs on port `8015`. Interactive docs are available at `/api/docs`.
 | Group | Endpoints |
 |---|---|
 | **user** | `GET /api/me` |
-| **grid — wind** | `GET /api/grid/{network_id}/wind/map`, `/wind/bosco`, `/wind/alert-distribution`, `/wind/trend` |
-| **grid — heat** | `GET /api/grid/{network_id}/heat/map`, `/heat/alert-distribution`, `/heat/trend` |
 | **grid — infra** | `GET /api/grid/{network_id}/substations/map`, `/filters`, `/summary` |
 | **grid — CIM topology** | `GET /api/grid/{network_id}/tile-index`, `/shapes`, `/risks`, `/risks-now`, `/trendline` |
 | **alerts** | `GET/POST /api/alert-rules`, `PATCH/DELETE /api/alert-rules/{id}` |

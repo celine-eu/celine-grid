@@ -1,7 +1,9 @@
 # The grid data proxy
 
-Eighteen routes under `/api/grid/{network_id}/`, all of which forward a request to the
-Digital Twin and return what comes back. Two of them, `/shapes` and `/tree-strike-spans`,
+Eleven routes under `/api/grid/{network_id}/` (`/substations/map`, `/filters`,
+`/tile-index`, `/shapes`, `/tree-strike-spans`, `/risks`, `/risks-now`, `/risk-km`,
+`/risks-8h`, `/trendline`, `/summary`), all of which forward a request to the Digital
+Twin and return what comes back. Two of them, `/shapes` and `/tree-strike-spans`,
 assemble the rows into GeoJSON — the only transformation this service applies to grid data.
 
 ---
@@ -121,3 +123,15 @@ than a `LineString`), and every other column, thermal ones included
 (`thermal_tier`, `thermal_margin_c`, `thermal_theta_max_c`, `thermal_insulation`,
 `is_asphalt`, `anno_posa`, `technology`, `m_r_critico`), becomes a feature property
 without the endpoint needing to know what any of them mean.
+
+### REQ-0053 — there are no `/wind/*` or `/heat/*` routes
+
+`GET /api/grid/{network_id}/wind/map`, `/wind/bosco`, `/wind/alert-distribution`,
+`/wind/trend`, `/heat/map`, `/heat/alert-distribution` and `/heat/trend` answer `404` for
+every caller, and the Digital Twin is not called. The service's OpenAPI document lists none
+of them.
+
+The wind and heat risk data reaches the map through `/risks`, `/risks-now`, `/risks-8h`,
+`/risk-km` and `/trendline`. The removed routes forwarded to Digital Twin routes that read
+intermediaries the platform does not expose, so they answered an error for every caller,
+and no client called them. Their Digital Twin routes and SDK methods are removed with them.
