@@ -2,6 +2,33 @@
 
 <!-- version list -->
 
+## v1.4.0 (2026-10-08)
+
+### Bug Fixes
+
+- A caller in several DSO organisations names the network instead of getting the first
+  ([`0ff659e`](https://github.com/celine-eu/celine-grid/commit/0ff659e230bb3800ae24068807657690203bd851))
+
+- Oidc client configurable from env
+  ([`5da490b`](https://github.com/celine-eu/celine-grid/commit/5da490b36a1a2b756883491f0a704f4ed4707e79))
+
+- Serve api docs only in dev unless CELINE_PUBLIC_DOCS is set
+  ([`ecb1ef8`](https://github.com/celine-eu/celine-grid/commit/ecb1ef8d96cb77e86781271a9423ff2ee43c3d1e))
+
+### Chores
+
+- Drop the celine-sdk release TODOs now that 2.0.0 ships them
+  ([`800b098`](https://github.com/celine-eu/celine-grid/commit/800b098cb721e7b7a1192b261efdf6516fd018b1))
+
+- Upgrade celine-sdk to 2.0.0
+  ([`ece5ce9`](https://github.com/celine-eu/celine-grid/commit/ece5ce917bbd2d976a9877418bb4635b1c9f310b))
+
+### Features
+
+- Drop the legacy wind and heat proxy routes
+  ([`9145441`](https://github.com/celine-eu/celine-grid/commit/914544181a2e1d1a69a93c04133c6d91aaf92026))
+
+
 ## v1.3.0 (2026-10-02)
 
 ### Chores
