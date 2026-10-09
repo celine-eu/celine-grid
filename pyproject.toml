@@ -5,12 +5,12 @@ requires-python = ">=3.12"
 readme = "README.md"
 dependencies = [
   "fastapi>=0.136.1",
-  "pydantic>=2.13.3",
+  "pydantic>=2.13.5",
   "pydantic-settings>=2.14.0",
   "uvicorn[standard]>=0.46.0",
   "sqlalchemy>=2.0.0",
   "asyncpg>=0.31.0",
-  "psycopg2-binary>=2.9.12",
+  "psycopg2-binary>=2.9.13",
   "alembic>=1.13.0",
   "sqlalchemy-utils>=0.42.1",
   # 2.0.0 is the first release with celine.sdk.posture (security/posture.py,
