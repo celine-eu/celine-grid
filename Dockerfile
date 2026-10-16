@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ── Stage 1: dependency install ───────────────────────────────────────────────
-FROM python:3.12-slim AS python-builder
+FROM python:3.14-slim AS python-builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -23,7 +23,7 @@ COPY src/ ./src/
 RUN uv sync --no-editable --no-dev
 
 # ── Stage 2: runtime ──────────────────────────────────────────────────────────
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
