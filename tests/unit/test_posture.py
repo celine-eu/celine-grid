@@ -115,7 +115,7 @@ def test_outside_dev_each_dev_value_alone_refuses_startup(monkeypatch, change, s
 def test_outside_dev_a_missing_policy_bundle_refuses_startup(monkeypatch, env):
     _set_env(monkeypatch, env)
 
-    with pytest.raises(InsecureConfiguration, match="CELINE_POLICIES_POLICIES_DIR"):
+    with pytest.raises(InsecureConfiguration, match="CELINE_POLICIES_DIR"):
         enforce_posture(configured(), policy_loaded=False)
 
 

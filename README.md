@@ -93,18 +93,19 @@ This needs `celine.sdk.posture`, first released in celine-sdk 2.0.0.
 | `DT_CLIENT_SCOPE` | — | OAuth2 scope for outbound DT calls |
 | `NUDGING_SCOPE` | — | OAuth2 scope for outbound nudging calls |
 | `CORS_ORIGINS` | `["http://localhost:3006"]` | Allowed CORS origins |
-| `CELINE_POLICIES_POLICIES_DIR` | `./policies` | Directory containing `.rego` policy files |
+| `CELINE_POLICIES_DIR` | `./policies` | Directory containing `.rego` policy files |
 | `GRID_PIPELINE_FLOW` | `grid-resilience-flow` | Prefect flow name to listen for |
 | `CELINE_MQTT_HOST` | `host.docker.internal` | MQTT broker host |
 | `CELINE_MQTT_PORT` | `1883` | MQTT broker port |
 | `MQTT_STARTUP_TIMEOUT_SECONDS` | `30.0` | Maximum startup wait for the MQTT listener |
 | `JWT_HEADER_NAME` | `x-auth-request-access-token` | Header carrying the bearer token (set by OAuth2 Proxy) |
 
-Prefixed names come from `celine-sdk`'s own settings models and are doubly prefixed by
-construction: `CELINE_POLICIES_` + `policies_dir`. Three rows of this table named
-variables that do not exist until 2026-08-15 — `CELINE_POLICIES_DIR` and `MQTT__HOST` are
-both silently ignored, so following the old table left the service on its permissive
-policy fallback with no indication. `.env.example` was correct throughout and is the
+Prefixed names come from `celine-sdk`'s own settings models. Until 2026-10-15 the policies
+directory was doubly prefixed by construction (`CELINE_POLICIES_` + `policies_dir`, so
+`CELINE_POLICIES_POLICIES_DIR`); the SDK now reads `CELINE_POLICIES_DIR` and still accepts
+the doubled spelling as a fallback. Three rows of this table named variables that did not
+exist until 2026-08-15 — `MQTT__HOST` among them was silently ignored, so following the old
+table left the service on its permissive policy fallback with no indication. `.env.example` was correct throughout and is the
 reference if the two ever disagree again.
 
 The default policies path is **relative**, so the bundle loads only when the process's

@@ -40,10 +40,10 @@ def build_guard(
     guard.require_explicit_oidc(cfg.oidc)
     if not policy_loaded:
         guard.add(
-            "CELINE_POLICIES_POLICIES_DIR",
+            "CELINE_POLICIES_DIR",
             f"no policy bundle loaded from {cfg.policies.policies_dir} — outside dev "
             "every authorisation decision would be a denial",
-            "Ship policies/ with the service, or point CELINE_POLICIES_POLICIES_DIR at it.",
+            "Ship policies/ with the service, or point CELINE_POLICIES_DIR at it.",
         )
     return guard
 

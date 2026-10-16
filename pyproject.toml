@@ -16,7 +16,7 @@ dependencies = [
   # 2.0.0 is the first release with celine.sdk.posture (security/posture.py,
   # security/policy.py; docs_urls included) and the two-level grant model
   # (JwtUser.is_platform_admin in the tests; extract_groups removed).
-  "celine-sdk>=2.0.0",
+  "celine-sdk>=2.1.1",
 ]
 
 

@@ -51,7 +51,7 @@ os.environ["CELINE_MQTT_PORT"] = "1"
 # the suite is independent of the working directory — and so a missing bundle is a
 # collection error rather than a suite that silently allows everything.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-os.environ["CELINE_POLICIES_POLICIES_DIR"] = str(_REPO_ROOT / "policies")
+os.environ["CELINE_POLICIES_DIR"] = str(_REPO_ROOT / "policies")
 
 import pytest  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402

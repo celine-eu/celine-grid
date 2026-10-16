@@ -37,7 +37,7 @@ Outside dev, startup raises `InsecureConfiguration` naming every violation at on
 - `CELINE_OIDC_CLIENT_SECRET` is empty or equal to the client id;
 - `CELINE_OIDC_BASE_URL` / `CELINE_OIDC_JWKS_URI` were not set, so the SDK's local
   default is in use;
-- the policy bundle did not load (`CELINE_POLICIES_POLICIES_DIR`) — REQ-0013.
+- the policy bundle did not load (`CELINE_POLICIES_DIR`) — REQ-0013.
 
 In dev the same values are logged as one warning and startup proceeds.
 
