@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.5.0 (2026-11-06)
+
+### Bug Fixes
+
+- **deps**: Celine-sdk>=2.2.3, the MQTT listener outlives a broker restart
+  ([`51fd155`](https://github.com/celine-eu/celine-grid/commit/51fd155178b55984aaa36597fc48dc125bca4c53))
+
+### Features
+
+- Normalize CELINE_POICIES* use
+  ([`a307ac6`](https://github.com/celine-eu/celine-grid/commit/a307ac6d49a3f43793a412bebb6e0284ce038daf))
+
+
 ## v1.4.0 (2026-10-08)
 
 ### Bug Fixes
